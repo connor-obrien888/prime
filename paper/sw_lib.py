@@ -527,3 +527,73 @@ def index_shifter(in_df, shift, keys):
     shift_index = safe_index + shift #shift the index
     shift_index = shift_index[(shift_index>=0)&(shift_index<len(in_df))] #Ensure the index is still within bounds
     return shift_index
+
+def fillutil(cdf_struct, varname, attdict, data):
+    '''
+    Function that fills a CDF variable with data and metadata.
+    '''
+    cdf_struct[varname] = data
+    cdf_struct[varname].attrs = attdict
+    if (np.min(data)>=np.max(data)): #If the data is constant/length 1, we need to set VALIDMIN and VALIDMAX to almost the same value
+        cdf_struct[varname].attrs['VALIDMIN'] = np.min(data) 
+        try:
+            cdf_struct[varname].attrs['VALIDMAX'] = np.min(data)+0.1
+        except TypeError: #Throws when data is a datetime object
+            cdf_struct[varname].attrs['VALIDMAX'] = np.min(data)+pd.Timedelta(seconds=1)
+    else:
+        cdf_struct[varname].attrs['VALIDMIN'] = np.min(data)
+        cdf_struct[varname].attrs['VALIDMAX'] = np.max(data)
+        
+def labelutil(cdf_struct, varname, attdict, labels):
+    '''
+    Function that fills a CDF variable with labels and metadata.
+    '''
+    cdf_struct[varname] = labels
+    cdf_struct[varname].attrs = attdict
+
+def cdfw(data,filename):
+    """
+    Function that takes dataframe of PRIME outputs and saves as CDF with correct metadata.
+
+    ### Parameters
+    
+    * data : float, array-like
+        >Dataframe of PRIME outputs.
+    * filename : str
+        >string filename to save the CDF as.
+    
+    ### Returns
+    
+    * write : bool
+        >Bool of whether file is written.
+    
+    """
+    from spacepy import pycdf
+    import cdfdicts as cdfd
+    if (data.shape[0] == 0): #Were we passed an empty array?
+        return False
+    cdf = pycdf.CDF(filename, create=True)
+    cdf.attrs = cdfd.primebsn_att_dict
+    cdf.attrs['Logical_file_id'] = filename
+    fillutil(cdf,'Epoch',cdfd.epoch_primebsn_att,data['Epoch'].to_numpy())
+    fillutil(cdf,'B_GSM',cdfd.bgsm_primebsn_att,data.loc[:, ['B_xgsm', 'B_ygsm', 'B_zgsm']].to_numpy())
+    fillutil(cdf,'B_GSM_sig',cdfd.bgsmsig_primebsn_att,data.loc[:, ['B_xgsm_sig', 'B_ygsm_sig', 'B_zgsm_sig']].to_numpy())
+    fillutil(cdf,'V_GSE',cdfd.vgse_primebsn_att,data.loc[:, ['Vi_xgse', 'Vi_ygse', 'Vi_zgse']].to_numpy())
+    fillutil(cdf,'V_GSE_sig',cdfd.vgsesig_primebsn_att,data.loc[:, ['Vi_xgse_sig', 'Vi_ygse_sig', 'Vi_zgse_sig']].to_numpy())
+    fillutil(cdf,'Ne',cdfd.n_primebsn_att,data['Ne'].to_numpy())
+    fillutil(cdf,'Ne_sig',cdfd.nsig_primebsn_att,data['Ne_sig'].to_numpy())
+    fillutil(cdf,'interpflag',cdfd.flag_primebsn_att,data['interp_frac'].to_numpy())
+    labelutil(cdf,'B_GSM_label',cdfd.bgsm_primebsn_label,['Bx GSM','By GSM','Bz GSM'])
+    labelutil(cdf,'B_GSM_sig_label',cdfd.bgsmsig_primebsn_label,['Bx GSM Sigma','By GSM Sigma','Bz GSM Sigma'])
+    labelutil(cdf,'V_GSE_label',cdfd.vgse_primebsn_label,['Vx GSE','Vy GSE','Vz GSE'])
+    labelutil(cdf,'V_GSE_sig_label',cdfd.vgsesig_primebsn_label,['Vx GSE Sigma','Vy GSE Sigma','Vz GSE Sigma'])
+    labelutil(cdf,'Ne_label',cdfd.n_primebsn_label,['Ne'])
+    labelutil(cdf,'Ne_sig_label',cdfd.nsig_label,['Ne Sigma'])
+    labelutil(cdf,'B_GSM_units',cdfd.bgsm_primebsn_units,['nT','nT','nT'])
+    labelutil(cdf,'B_GSM_sig_units',cdfd.bgsmsig_primebsn_units,['nT','nT','nT'])
+    labelutil(cdf,'V_GSE_units',cdfd.vgse_primebsn_units,['km/s','km/s','km/s'])
+    labelutil(cdf,'V_GSE_sig_units',cdfd.vgsesig_primebsn_units,['km/s','km/s','km/s'])
+    labelutil(cdf,'Ne_units',cdfd.n_primebsn_units,['cm^-3'])
+    labelutil(cdf,'Ne_sig_units',cdfd.nsig_primebsn_units,['cm^-3'])
+    cdf.close()
+    return True
