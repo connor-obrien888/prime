@@ -21,6 +21,7 @@ setup(name='primesw',
             'numpy',
             'tensorflow',
             'scikit-learn',
+            'joblib',
             'keras'],
       include_package_data=True,
       zip_safe=False)

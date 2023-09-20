@@ -2,25 +2,22 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras as ks
 from sklearn.preprocessing import RobustScaler
+import joblib
 
 class prime():
     def __init__(self, saved_model = None, saved_insc = None, saved_tarsc = None) -> None:
         if saved_model is None:
-            self.model = ks.models.load_model('prime_v0.1.0')
+            self.model = ks.models.load_model('modelbin/prime_v0.1.0.h5')
         else:
             self.model = ks.models.load_model(saved_model)
         if saved_insc is None:
-            self.inscaler = RobustScaler()
-            self.inscaler = self.inscaler.fit(np.load('primeinsc_v0.1.0.npy'))
+            self.inscaler = joblib.load('modelbin/primeinsc_v0.1.0.pkl')
         else:
-            self.inscaler = RobustScaler()
-            self.inscaler = self.inscaler.fit(np.load(saved_insc))
+            self.inscaler = joblib.load(saved_insc)
         if saved_tarsc is None:
-            self.tarscaler = RobustScaler()
-            self.tarscaler = self.tarscaler.fit(np.load('primetarsc_v0.1.0.npy'))
+            self.tarscaler = joblib.load('modelbin/primetarsc_v0.1.0.pkl')
         else:
-            self.tarscaler = RobustScaler()
-            self.tarscaler = self.tarscaler.fit(np.load(saved_tarsc))
+            self.tarscaler = joblib.load(saved_tarsc)
     def predict_func(self, X):
         X = self.inscaler.transform(X)
         return self.tarscaler.inverse_transform(self.model.predict(X))
