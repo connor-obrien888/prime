@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "primesw"
+version = "0.1.0"
+description = "Probabilistic Regressor for Input to the Magnetosphere Estimation (Solar Wind)"
+authors = ["Connor OBrien"]
+license = "GPL-3.0"
+readme = "README.md"
+packages = [{include = "primesw"}]
+classifiers=[
+      'Development Status :: 4 - Beta',
+      'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+      'Programming Language :: Python :: 3.8',
+      'Topic :: Scientific/Engineering :: Physics',
+      'Topic :: Scientific/Engineering :: Astronomy',
+      'Topic :: Scientific/Engineering :: Atmospheric Science'
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.12"
+tensorflow = "2.8.0"
+matplotlib = ">=3.4"
+pandas = ">=1.2"
+scipy = ">=1.6"
+scikit-learn = ">=0.24"
+numpy = ">=1.20.3"
+protobuf = "3.20.0"
+tables = "^3.8.0"
+
+[project.optional-dependencies]
+cdasws = "^1.8.9"
+
+[project.urls]
+Homepage = "https://github.com/connor-obrien888/prime"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
