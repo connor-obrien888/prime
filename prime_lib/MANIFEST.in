@@ -1,1 +1,2 @@
-include prime/model_bin/*
+include primesw/*.keras
+include primesw/*.pkl

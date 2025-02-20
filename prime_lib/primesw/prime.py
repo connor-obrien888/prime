@@ -6,50 +6,15 @@ import tensorflow.keras as ks
 from sklearn.preprocessing import RobustScaler #RobustScaler is used to scale the input/target data but is not called directly below
 import joblib
 
-#MMS orbit that ends at bow shock nose stride*100s from the end of the window 
-#(13.25RE, 0RE, 0RE) (from 2023-01-24 02:46:30+0000 - window - stride to 2023-01-24 02:46:30+0000 - stride)
-SYNTH_XPOS = np.array([69215.97057508, 69480.44662705, 69706.40911294, 69969.18467343,
-                       70231.11857452, 70454.91674057, 70715.18415549, 70974.62662114,
-                       71196.30325009, 71454.11198298, 71711.11182052, 71930.70839187,
-                       72186.10608653, 72440.71045452, 72658.26693929, 72911.29961567,
-                       73163.55400328, 73379.10893932, 73629.82119345, 73879.76950962,
-                       74093.36015524, 74341.79489098, 74589.47977345, 74801.14208574,
-                       75047.34088887, 75292.80336019, 75502.57231563, 75746.57534655,
-                       75989.85512801, 76197.76442711, 76439.61054906, 76680.7461448 ,
-                       76886.82833966, 77126.55527427, 77365.58400364, 77569.8706008 ,
-                       77807.51485289, 78044.47276422, 78246.99446109, 78482.59130139,
-                       78717.51337097, 78918.29986461, 79151.88352716, 79384.80363257,
-                       79583.88365476, 79815.48746062, 80046.43841324, 80243.83985851,
-                       80473.4959342 , 80702.50977538]) #: Synthetic MMS-1 X position for prediction at bow shock
-SYNTH_YPOS = np.array([-6242.531374  , -6141.43603983, -6054.73851884, -5953.54260001,
-                       -5852.30035979, -5765.48374707, -5664.15672177, -5562.79111177,
-                       -5475.87538835, -5374.44022431, -5272.97399371, -5185.97841963,
-                       -5084.45744369, -4982.91267323, -4895.85591308, -4794.27072076,
-                       -4692.66879919, -4605.56897563, -4503.9403974 , -4402.3019605 ,
-                       -4315.17661655, -4213.52495494, -4111.87001052, -4024.73625516,
-                       -3923.08129418, -3821.42952425, -3734.30395957, -3632.66493195,
-                       -3531.03538868, -3443.93418239, -3342.32979659, -3240.74102942,
-                       -3153.67997007, -3052.12846626, -2950.598573  , -2863.59314841,
-                       -2762.11237883, -2660.65906956, -2573.72426935, -2472.33166917,
-                       -2370.97225436, -2284.122821  , -2182.83554019, -2081.58702282,
-                       -1994.83737245, -1893.67203926, -1792.55094402, -1705.91518784,
-                       -1604.88808488, -1503.91065025]) #: Synthetic MMS-1 Y position for prediction at bow shock
-SYNTH_ZPOS = np.array([1428.22663895, 1404.9257232 , 1384.88999865, 1361.43852111,
-                       1337.90827722, 1317.66995298, 1293.97504102, 1270.1942372 ,
-                       1249.73509015, 1225.77542686, 1201.72276543, 1181.02453785,
-                       1156.77888242, 1132.43315908, 1111.47770227, 1086.92488254,
-                       1062.26489785, 1041.03400953, 1016.15277964,  991.1573987 ,
-                       969.6329908 ,  944.40232752,  919.05058092,  897.21474963,
-                       871.61379271,  845.88483511,  823.71973863,  797.7278038 ,
-                       771.60099544,  749.08907437,  722.68572634,  696.14074783,
-                       673.26462524,  646.42970201,  619.4464814 ,  596.18909891,
-                       568.90278803,  541.46164749,  517.80622717,  490.04905226,
-                       462.13065323,  438.0606711 ,  409.81356785,  381.39897532,
-                       356.89834051,  328.14264026,  299.21335127,  274.26632698,
-                       244.98385268,  215.52178328]) #: Synthetic MMS-1 Z position for prediction at bow shock
-SYNTH_POS = np.array([SYNTH_XPOS, SYNTH_YPOS, SYNTH_ZPOS]).T #: Synthetic MMS-1 orbit for prediction at bow shock
-
 class prime(ks.Model):
+    '''
+        Class to wrap a keras model to be used with the SW-trained PRIME architecture.
+
+        Parameters:
+            model (keras model): Keras model to be used for prediction
+            in_scaler (sklearn scaler): Scaler to be used for input data
+            tar_scaler (sklearn scaler): Scaler to be used for target data
+    '''
     def __init__(
             self, 
             model = None, 
@@ -60,23 +25,15 @@ class prime(ks.Model):
             out_keys = None, 
             hps = [60, 15, 5.0/60.0]
         ):
-        '''
-        Class to wrap a keras model to be used with the SW-trained PRIME architecture.
-
-        Parameters:
-            model (keras model): Keras model to be used for prediction
-            in_scaler (sklearn scaler): Scaler to be used for input data
-            tar_scaler (sklearn scaler): Scaler to be used for target data
-        '''
         super(prime, self).__init__()
         if in_scaler is None:
-            resource_path = importlib.resources.path(prime, '/model_bin/primeinsc_v0.1.0.pkl')
+            resource_path = importlib.resources.path('primesw', 'primeinsc_v0.1.0.pkl')
             with resource_path as in_scaler_file:
                 self.in_scaler = joblib.load(in_scaler_file)
         else:
             self.in_scaler = in_scaler
         if tar_scaler is None:
-            resource_path = importlib.resources.path(prime, '/model_bin/primetarsc_v0.1.0.pkl')
+            resource_path = importlib.resources.path('primesw', 'primetarsc_v0.1.0.pkl')
             with resource_path as tar_scaler_file:
                 self.tar_scaler = joblib.load(tar_scaler_file)
         else:
@@ -135,11 +92,10 @@ class prime(ks.Model):
         self.stride = hps[1] # Input stride length from hyperparameter list
         self.fraction = hps[2] # Input maximum tolerable fraction of interpolated data from hyperparameter list
         if model is None:
-            self.model = self.build_model() # Instantiate model architecture with hyperparameters
-            resource_path = importlib.resources.path(prime, '/model_bin/prime_v0.1.0.h5')
+            # self.model = self.build_model() # Instantiate model architecture with hyperparameters
+            resource_path = importlib.resources.path('primesw', 'prime_v0.1.0.keras')
             with resource_path as model_weights_file:
-                self.model.load_weights(model_weights_file)  # Load the saved weights
-            self.model = model # Store in class
+                self.model = ks.models.load_model(model_weights_file, custom_objects = {'crps_loss' : crps_loss, 'mse_metric' : mse_metric})  # Load the saved model
         else:
             self.model = model
 
@@ -173,7 +129,7 @@ class prime(ks.Model):
         return output
     def predict_raw(self, input):
         '''
-        Wrapper function to predict with a keras model.
+        Generates PRIME predictions from input dataframe. Assumes that input has keys specified by `prime.in_keys`. It is generally recommended to use `prime.predict` instead.
         '''
         input_scaled = self.in_scaler.transform(input) # Rescale the input data
         input_arr = np.zeros((len(input_scaled)-(self.window-1), self.window, len(self.in_keys))) # Reshape input data to be 3D
@@ -268,7 +224,7 @@ class prime(ks.Model):
         return output_grid
     def build_model(self, units = [352, 192, 48, 48], activation = 'elu', dropout = 0.20, lr = 1e-4):
         '''
-        Function to build keras model
+        Builds the underlying PRIME model with no weights or biases loaded.
 
         Parameters:
             units (list): Number of units in each layer of the model
@@ -310,7 +266,7 @@ class prime(ks.Model):
             ):
         '''
         Builds a synthetic input array from user-specified quantities at L1.
-        For input arrays made from measured data at L1, see build_real_input().
+        For input arrays made from measured data at L1, see `primesw.prime.build_real_input`.
         
         Parameters:
             epoch (datetime): Datetime of start of input Dataframe.
@@ -462,8 +418,7 @@ class prime(ks.Model):
 
 def crps_loss(y_true, y_pred):
     """
-    Continuous rank probability score function.
-    Assumes tensorflow backend.
+    Tensorflow implementation of the Continuous Rank Probability Score loss function. Assumes seven output features. For a simpler functional version, see `primesw.crps_f`.
     
     Parameters
     ----------
@@ -494,23 +449,84 @@ def crps_loss(y_true, y_pred):
     
     return crps
 
+def mse_metric(y_true, y_pred):
+    """
+    Tensorflow implementation of Mean Squared Error compatible with PRIME's output layer. Assumes seven output features. Not suitable for use as a loss function.
+    
+    Parameters
+    ----------
+    y_true : tf.Tensor
+        Ground truth values of predicted variable.
+    y_pred : tf.Tensor
+        mu and sigma^2 values of predicted distribution.
+        
+    Returns
+    -------
+    mse : tf.Tensor
+        MSE between mu and y_true.
+    """
+    # Separate the parameters into means and squared standard deviations
+    # mu0, sg0, mu1, sg1, mu2, sg2, mu3, sg3, mu4, sg4, mu5, sg5, mu6, sg6, mu7, sg7, mu8, sg8 = tf.unstack(y_pred, axis=-1)
+    mu0, sg0, mu1, sg1, mu2, sg2, mu3, sg3, mu4, sg4, mu5, sg5, mu6, sg6 = tf.unstack(y_pred, axis=-1)
+    #Oh my god mu2, I can't believe it
+    
+    # Separate the ground truth into each parameter
+    # y_true0, y_true1, y_true2, y_true3, y_true4, y_true5, y_true6, y_true7, y_true8 = tf.unstack(y_true, axis=-1)
+    y_true0, y_true1, y_true2, y_true3, y_true4, y_true5, y_true6 = tf.unstack(y_true, axis=-1)
+    
+    # Add one dimension to make the right shape
+    mu0 = tf.expand_dims(mu0, -1)
+    mu1 = tf.expand_dims(mu1, -1)
+    mu2 = tf.expand_dims(mu2, -1)
+    mu3 = tf.expand_dims(mu3, -1)
+    mu4 = tf.expand_dims(mu4, -1)
+    mu5 = tf.expand_dims(mu5, -1)
+    mu6 = tf.expand_dims(mu6, -1)
+    # mu7 = tf.expand_dims(mu7, -1)
+    # mu8 = tf.expand_dims(mu8, -1)
+    y_true0 = tf.expand_dims(y_true0, -1)
+    y_true1 = tf.expand_dims(y_true1, -1)
+    y_true2 = tf.expand_dims(y_true2, -1)
+    y_true3 = tf.expand_dims(y_true3, -1)
+    y_true4 = tf.expand_dims(y_true4, -1)
+    y_true5 = tf.expand_dims(y_true5, -1)
+    y_true6 = tf.expand_dims(y_true6, -1)
+    # y_true7 = tf.expand_dims(y_true7, -1)
+    # y_true8 = tf.expand_dims(y_true8, -1)
+    
+    # Calculate the MSE
+    mse0 = tf.math.reduce_mean(tf.math.square(y_true0 - mu0))
+    mse1 = tf.math.reduce_mean(tf.math.square(y_true1 - mu1))
+    mse2 = tf.math.reduce_mean(tf.math.square(y_true2 - mu2))
+    mse3 = tf.math.reduce_mean(tf.math.square(y_true3 - mu3))
+    mse4 = tf.math.reduce_mean(tf.math.square(y_true4 - mu4))
+    mse5 = tf.math.reduce_mean(tf.math.square(y_true5 - mu5))
+    mse6 = tf.math.reduce_mean(tf.math.square(y_true6 - mu6))
+    # mse7 = tf.math.reduce_mean(tf.math.square(y_true7 - mu7))
+    # mse8 = tf.math.reduce_mean(tf.math.square(y_true8 - mu8))
+    
+    # Average the MSEs
+    # mse = (mse0 + mse1 + mse2 + mse3 + mse4 + mse5 + mse6 + mse7 + mse8) / 9.0
+    mse = (mse0 + mse1 + mse2 + mse3 + mse4 + mse5 + mse6) / 9.0
+    return mse
+
 def crps_f(ep, sg):
     '''
-    Helper function that calculates continuous rank probability score
+    Helper function that calculates continuous rank probability score.
     '''
     crps = sg * ((ep/sg) * tf.math.erf((ep/(np.sqrt(2)*sg))) + tf.math.sqrt(2/np.pi) * tf.math.exp(-ep**2 / (2*sg**2)) - 1/tf.math.sqrt(np.pi))
     return crps
 
 def ep_f(y, mu):
     '''
-    Helper function that calculates epsilon (error) for CRPS
+    Helper function that calculates epsilon (error) for CRPS.
     '''
     ep = tf.math.abs(y - mu)
     return ep
 
 def unstack_helper(y_true, y_pred):
     '''
-    Helper function that unstacks the outputs and targets
+    Helper function that unstacks the outputs and targets used in `primesw.crps`.
     '''
     # Separate the parameters into means and squared standard deviations
     mu0, sg0, mu1, sg1, mu2, sg2, mu3, sg3, mu4, sg4, mu5, sg5, mu6, sg6 = tf.unstack(y_pred, axis=-1)
@@ -541,3 +557,50 @@ def unstack_helper(y_true, y_pred):
     y_true5 = tf.expand_dims(y_true5, -1)
     y_true6 = tf.expand_dims(y_true6, -1)
     return mu0, sg0, mu1, sg1, mu2, sg2, mu3, sg3, mu4, sg4, mu5, sg5, mu6, sg6, y_true0, y_true1, y_true2, y_true3, y_true4, y_true5, y_true6
+
+#MMS orbit that ends at bow shock nose stride*100s from the end of the window 
+#(13.25RE, 0RE, 0RE) (from 2023-01-24 02:46:30+0000 - window - stride to 2023-01-24 02:46:30+0000 - stride)
+SYNTH_XPOS = np.array([69215.97057508, 69480.44662705, 69706.40911294, 69969.18467343,
+                       70231.11857452, 70454.91674057, 70715.18415549, 70974.62662114,
+                       71196.30325009, 71454.11198298, 71711.11182052, 71930.70839187,
+                       72186.10608653, 72440.71045452, 72658.26693929, 72911.29961567,
+                       73163.55400328, 73379.10893932, 73629.82119345, 73879.76950962,
+                       74093.36015524, 74341.79489098, 74589.47977345, 74801.14208574,
+                       75047.34088887, 75292.80336019, 75502.57231563, 75746.57534655,
+                       75989.85512801, 76197.76442711, 76439.61054906, 76680.7461448 ,
+                       76886.82833966, 77126.55527427, 77365.58400364, 77569.8706008 ,
+                       77807.51485289, 78044.47276422, 78246.99446109, 78482.59130139,
+                       78717.51337097, 78918.29986461, 79151.88352716, 79384.80363257,
+                       79583.88365476, 79815.48746062, 80046.43841324, 80243.83985851,
+                       80473.4959342 , 80702.50977538])
+#: Synthetic MMS-1 X position for prediction at bow shock
+SYNTH_YPOS = np.array([-6242.531374  , -6141.43603983, -6054.73851884, -5953.54260001,
+                       -5852.30035979, -5765.48374707, -5664.15672177, -5562.79111177,
+                       -5475.87538835, -5374.44022431, -5272.97399371, -5185.97841963,
+                       -5084.45744369, -4982.91267323, -4895.85591308, -4794.27072076,
+                       -4692.66879919, -4605.56897563, -4503.9403974 , -4402.3019605 ,
+                       -4315.17661655, -4213.52495494, -4111.87001052, -4024.73625516,
+                       -3923.08129418, -3821.42952425, -3734.30395957, -3632.66493195,
+                       -3531.03538868, -3443.93418239, -3342.32979659, -3240.74102942,
+                       -3153.67997007, -3052.12846626, -2950.598573  , -2863.59314841,
+                       -2762.11237883, -2660.65906956, -2573.72426935, -2472.33166917,
+                       -2370.97225436, -2284.122821  , -2182.83554019, -2081.58702282,
+                       -1994.83737245, -1893.67203926, -1792.55094402, -1705.91518784,
+                       -1604.88808488, -1503.91065025])
+#: Synthetic MMS-1 Y position for prediction at bow shock
+SYNTH_ZPOS = np.array([1428.22663895, 1404.9257232 , 1384.88999865, 1361.43852111,
+                       1337.90827722, 1317.66995298, 1293.97504102, 1270.1942372 ,
+                       1249.73509015, 1225.77542686, 1201.72276543, 1181.02453785,
+                       1156.77888242, 1132.43315908, 1111.47770227, 1086.92488254,
+                       1062.26489785, 1041.03400953, 1016.15277964,  991.1573987 ,
+                       969.6329908 ,  944.40232752,  919.05058092,  897.21474963,
+                       871.61379271,  845.88483511,  823.71973863,  797.7278038 ,
+                       771.60099544,  749.08907437,  722.68572634,  696.14074783,
+                       673.26462524,  646.42970201,  619.4464814 ,  596.18909891,
+                       568.90278803,  541.46164749,  517.80622717,  490.04905226,
+                       462.13065323,  438.0606711 ,  409.81356785,  381.39897532,
+                       356.89834051,  328.14264026,  299.21335127,  274.26632698,
+                       244.98385268,  215.52178328])
+#: Synthetic MMS-1 Z position for prediction at bow shock
+SYNTH_POS = np.array([SYNTH_XPOS, SYNTH_YPOS, SYNTH_ZPOS]).T
+#: Synthetic MMS-1 orbit for prediction at bow shock
