@@ -1,9 +1,12 @@
 # PRIME
 [![DOI](https://zenodo.org/badge/648224321.svg)](https://zenodo.org/badge/latestdoi/648224321)
 
-PRIME (Probabilistic Regressor for Input to the Magnetosphere Estimation) is a probabilistic algorithm that uses solar wind time history from L1 monitors to generate predictions of near-Earth solar wind with uncertainties.
+PRIME (Probabilistic Regressor for Input to the Magnetosphere Estimation) is a probabilistic algorithm that uses solar wind time history from L1 monitors to generate predictions of near-Earth solar wind with uncertainties. Install with
+```
+pip install primesw
+```
 
-INSERT USAGE STATEMENTS AND LINK TO DOCUMENTATION
+For usage, read the [documentation](https://connor-obrien888.github.io/prime/primesw.html).
 
 For information on PRIME, including results from its validation and caveats on its use, please see the [paper](https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full).
 
