@@ -6,25 +6,26 @@ import tensorflow.keras as ks
 from sklearn.preprocessing import RobustScaler #RobustScaler is used to scale the input/target data but is not called directly below
 import joblib
 
+__all__ = ['prime', 'crps_loss', 'mse_metric'] # Here __all__ is defined so that pdoc only documents these identifiers. Other functions are not worth documenting or should not be accessed.
+
 class prime(ks.Model):
     '''
-        Class to wrap a keras model to be used with the SW-trained PRIME architecture.
+        Class to wrap a keras model to be used with the SW-trained PRIME architecture. It is recommended to instantiate `prime` objects in their default configuration:
+        ```
+        import primesw as psw
+        propagator = psw.prime()
+        ```
+        Users will most likely use this class primarily for its `prime.predict` method.
 
-        Parameters:
-            model (keras model): Keras model to be used for prediction
-            in_scaler (sklearn scaler): Scaler to be used for input data
-            tar_scaler (sklearn scaler): Scaler to be used for target data
+
+        When instantiating a `prime` object, one can specify a predefined `model` to be used instead of the automatically-loaded PRIME model. 
+        In that case, the scaling functions for the input and target datasets (`in_scaler` and `tar_scaler`), the input and target features (`in_keys` and `tar_keys`), and the output features (`out_keys`) must be specified.
+        The full list of arguments that can be passed to `prime` is given below.
     '''
-    def __init__(
-            self, 
-            model = None, 
-            in_scaler = None, 
-            tar_scaler = None, 
-            in_keys = None, 
-            tar_keys = None, 
-            out_keys = None, 
-            hps = [60, 15, 5.0/60.0]
-        ):
+    def __init__(self, model = None, in_scaler = None, tar_scaler = None, in_keys = None, tar_keys = None, out_keys = None, hps = [60, 15, 5.0/60.0]):
+        '''
+        `hps` is an array of dataset-pertinent hyperparameters. The three elements correspond to `window`, `input`, and `stride`:
+        '''
         super(prime, self).__init__()
         if in_scaler is None:
             resource_path = importlib.resources.path('primesw', 'primeinsc_v0.1.0.pkl')
@@ -88,9 +89,12 @@ class prime(ks.Model):
                 ] # Features in PRIME output (in general, tar_keys with 1sigma uncertainties denoted '_sig')
         else:
             self.out_keys = out_keys
-        self.window = hps[0] # Input window length from hyperparameter list
-        self.stride = hps[1] # Input stride length from hyperparameter list
-        self.fraction = hps[2] # Input maximum tolerable fraction of interpolated data from hyperparameter list
+        self.window = hps[0] 
+        """Length of input timeseries, in 100s units. Specified via `hps` argument."""
+        self.stride = hps[1] 
+        """Prediction lead time, in 100s units. Specified via `hps` argument."""
+        self.fraction = hps[2] 
+        """Maximum fraction of input timeseries that can be interpolated, in 100s units. Specified via `hps` argument."""
         if model is None:
             # self.model = self.build_model() # Instantiate model architecture with hyperparameters
             resource_path = importlib.resources.path('primesw', 'prime_v0.1.0.keras')
@@ -101,15 +105,32 @@ class prime(ks.Model):
 
     def predict(self, input = None, start = None, stop = None, pos = [13.25, 0, 0]):
         '''
-        Generate prime predictions from input dataframes or time ranges.
-        
-        Parameters:
-            input (dataframe, ndarray): Input data to be scaled and predicted
-            start (string, optional): Start time of prediction (will use real data). Format 'YYYY-MM-DD HH:MM:SS'.
-            stop (string, optional): Stop time of prediction (will use real data). Format 'YYYY-MM-DD HH:MM:SS'.
-            pos (list, optional): Position propagated to if 'start' and 'stop' are specified.
-        Returns:
-            output (dataframe): Scaled output data
+        Method that produces a dataframe of PRIME solar wind predictions.
+        To generate solar wind predictions from Wind spacecraft data, specify `start` and `stop` times for the desired prediction.
+        `start` and `stop` are strings with format 'YYYY-MM-DD HH:MM:SS'.
+        ```
+        import primesw as psw
+        propagator = psw.prime()
+        propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
+        ```
+        If using data from an L1 monitor to make predictions, pass the input data using `input` argument.
+        If `input` is specified, `start` and `stop` should not be (and vice versa).
+        `input` is also useful for making predicitons from synthetic solar wind data (see `prime.build_synth_input`).
+        For instance, one can predict what the solar wind at the bow shock nose would be if the solar wind flow at L1 was 700km/s:
+        ```
+        import primesw as psw
+        propagator = psw.prime()
+        propagator.predict(input = propagator.build_synth_input(vx=-700))
+        ```
+        By default, predictions are made at the average location of the nose of Earth's bow shock 13.25 Earth Radii upstream on the Geocentric Solar Ecliptic (GSE) x-axis.
+        One can also specify a position to propagate to besides the default by specifying `pos`:
+        ```
+        import primesw as psw
+        propagator = psw.prime()
+        propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00', pos = [13.25, 5, 0])
+        ```
+        All positions are in GSE coordinates with units of Earth Radii.
+        It is not recommended to make predictions outside of the region PRIME was trained on (within 30 Earth radii of the Earth on the dayside).
         '''
         if input is None:
             if (start is not None)&(stop is not None):
@@ -122,6 +143,7 @@ class prime(ks.Model):
         if isinstance(input, np.ndarray): # If input is an array
             input_arr = input # Set input array to input
         output_arr = self.predict_raw(input_arr) # Predict with the keras model
+        #TO DO: Throw a warning or include a flag if any predictions were made with data that was "too interpolated"
         output = pd.DataFrame(output_arr, columns = self.out_keys) # Convert output array to dataframe
         output_epoch = input['Epoch'].to_numpy()[(self.window-1):] # Stage an epoch column to be added to the output dataframe
         output_epoch += pd.Timedelta(seconds = 100*self.stride) # Add lead time to the epoch column
@@ -129,7 +151,7 @@ class prime(ks.Model):
         return output
     def predict_raw(self, input):
         '''
-        Generates PRIME predictions from input dataframe. Assumes that input has keys specified by `prime.in_keys`. It is generally recommended to use `prime.predict` instead.
+        Generates PRIME predictions from input dataframe. Assumes that `input` has keys specified by `prime.in_keys`. It is generally recommended to use `prime.predict` instead.
         '''
         input_scaled = self.in_scaler.transform(input) # Rescale the input data
         input_arr = np.zeros((len(input_scaled)-(self.window-1), self.window, len(self.in_keys))) # Reshape input data to be 3D
@@ -140,53 +162,34 @@ class prime(ks.Model):
         output[:, ::2] = self.tar_scaler.inverse_transform(output_unscaled[:, ::2]) #Mean values
         output[:, 1::2] = np.abs(self.tar_scaler.inverse_transform(output_unscaled[:, ::2] + output_unscaled[:, 1::2]) - self.tar_scaler.inverse_transform(output_unscaled[:, ::2])) #Standard deviations
         return output
-    def predict_grid(
-        self,
-        gridsize,
-        x_extent,
-        framenum,
-        bx,
-        by,
-        bz,
-        vx,
-        vy,
-        vz,
-        ni,
-        vt,
-        rx,
-        ry,
-        rz,
-        y_extent=None,
-        z_extent=None,
-        y = 0,
-        z = 0,
-        subtract_ecliptic=False,
-    ):
+    def predict_grid(self, gridsize, x_extent, framenum, bx, by, bz, vx, vy, vz, ni, vt, rx, ry, rz, y_extent=None, z_extent=None, y = 0, z = 0, subtract_ecliptic=False):
         """
-        Generate predictions from prime model on a grid of points.
+        Generate predictions from PRIME on a grid of points in GSE coordinates.
 
         Parameters:
-            gridsize (float): Spacing of grid points
-            x_extent (list): Range of x values to calculate on
-            framenum (int): Number of frames to calculate
-            bx (float, array-like): IMF Bx value. If array like, must be of length framenum.
-            by (float, array-like): IMF By value. If array like, must be of length framenum.
-            bz (float, array-like): IMF Bz value. If array like, must be of length framenum.
-            vx (float, array-like): Solar wind Vx value. If array like, must be of length framenum.
-            vy (float, array-like): Solar wind Vy value. If array like, must be of length framenum.
-            vz (float, array-like): Solar wind Vz value. If array like, must be of length framenum.
-            ni (float, array-like): Solar wind ion density value. If array like, must be of length framenum.
-            vt (float, array-like): Solar wind ion thermal speed value. If array like, must be of length framenum.
-            rx (float, array-like): Wind spacecraft position x value. If array like, must be of length framenum.
-            ry (float, array-like): Wind spacecraft position y value. If array like, must be of length framenum.
-            rz (float, array-like): Wind spacecraft position z value. If array like, must be of length framenum.
-            y_extent (list): Range of y values to calculate on. If None, z_extent must be specified.
-            z_extent (list): Range of z values to calculate on. If None, y_extent must be specified.
-            y (float, array-like): Y position that is held constant if y_extent is not specified. Default 0.
-            z (float, array-like): Z position that is held constant if z_extent is not specified. Default 0.
-            subtract_ecliptic (bool): Whether or not to subtract the Earth's motion in the ecliptic from Vy
+        -----------
+        -    gridsize (float): Spacing of grid points (RE)
+        -    x_extent (list): Range of x values to calculate on (GSE RE).
+        -    framenum (int): Number of frames to calculate (GSE RE).
+        -    bx (float, array-like): IMF Bx value (nT). If array like, must be of length framenum.
+        -    by (float, array-like): IMF By value (nT). If array like, must be of length framenum.
+        -    bz (float, array-like): IMF Bz value (nT). If array like, must be of length framenum.
+        -    vx (float, array-like): Solar wind Vx value (km/s). If array like, must be of length framenum.
+        -    vy (float, array-like): Solar wind Vy value (km/s). If array like, must be of length framenum.
+        -    vz (float, array-like): Solar wind Vz value (km/s). If array like, must be of length framenum.
+        -    ni (float, array-like): Solar wind ion density value (cm^-3). If array like, must be of length framenum.
+        -    vt (float, array-like): Solar wind ion thermal speed value (km/s). If array like, must be of length framenum.
+        -    rx (float, array-like): Wind spacecraft position x value (GSE RE). If array like, must be of length framenum.
+        -    ry (float, array-like): Wind spacecraft position y value (GSE RE). If array like, must be of length framenum.
+        -    rz (float, array-like): Wind spacecraft position z value (GSE RE). If array like, must be of length framenum.
+        -    y_extent (list): Range of y values to calculate on (GSE RE). If None, z_extent must be specified.
+        -    z_extent (list): Range of z values to calculate on (GSE RE). If None, y_extent must be specified.
+        -    y (float, array-like): Y position (GSE RE) that is held constant if y_extent is not specified. Default 0.
+        -    z (float, array-like): Z position (GSE RE) that is held constant if z_extent is not specified. Default 0.
+        -    subtract_ecliptic (bool): Whether or not to subtract the Earth's motion in the ecliptic from Vy. Default False.
         Returns:
-            output_grid (ndarray): Array of predicted values on the grid. Shape (framenum, x_extent/gridsize, y_extent/gridsize, 18)
+        --------
+        -    output_grid (ndarray): Array of predicted values on the grid. Shape (framenum, x_extent/gridsize, y_extent/gridsize, 14). Features as in `prime.out_keys`.
         """
         x_arr = np.arange(x_extent[0], x_extent[1], gridsize)  # Create a grid to calculate the solar wind conditions on
         y_arr = np.asarray([y]) # This array is overwritten if y_extent is specified
@@ -224,16 +227,9 @@ class prime(ks.Model):
         return output_grid
     def build_model(self, units = [352, 192, 48, 48], activation = 'elu', dropout = 0.20, lr = 1e-4):
         '''
-        Builds the underlying PRIME model with no weights or biases loaded.
-
-        Parameters:
-            units (list): Number of units in each layer of the model
-            activation (str): Activation function to use in hidden layers
-            dropout (float): Dropout rate to use in hidden layers
-            lr (float): Learning rate to use in optimizer
-        
-        Returns:
-            model (keras model): Keras model to be used for prediction (weights not initialized)
+        Builds the underlying PRIME model with no weights or biases loaded. Deprecated as of keras introducing the `.keras` model save routine.
+        Units are the layer size of the GRU layer and three dense layers.
+        Normalization and dropout applied at each layer.
         '''
         model = ks.Sequential([ks.layers.GRU(units=units[0]),
                                ks.layers.Dense(units=units[1], activation=activation),
@@ -266,27 +262,29 @@ class prime(ks.Model):
             ):
         '''
         Builds a synthetic input array from user-specified quantities at L1.
-        For input arrays made from measured data at L1, see `primesw.prime.build_real_input`.
+        For input arrays made from measured data at L1, see `prime.build_real_input`.
         
         Parameters:
-            epoch (datetime): Datetime of start of input Dataframe.
-            bx (float, array-like): IMF Bx value.
-            by (float, array-like): IMF By value.
-            bz (float, array-like): IMF Bz value.
-            vx (float, array-like): Solar wind Vx value.
-            vy (float, array-like): Solar wind Vy value.
-            vz (float, array-like): Solar wind Vz value.
-            ni (float, array-like): Solar wind ion density value.
-            vt (float, array-like): Solar wind ion thermal speed value.
-            rx (float, array-like): Wind spacecraft position x value.
-            ry (float, array-like): Wind spacecraft position y value.
-            rz (float, array-like): Wind spacecraft position z value.
-            tar_rx (float, array-like): Propagation target position x value.
-            tar_ry (float, array-like): Propagation target position y value.
-            tar_rz (float, array-like): Propagation target position z value.
+        -----------
+        -    epoch (datetime): Datetime of start of input Dataframe.
+        -    bx (float, array-like): IMF Bx value (nT).
+        -    by (float, array-like): IMF By value (nT).
+        -    bz (float, array-like): IMF Bz value (nT).
+        -    vx (float, array-like): Solar wind Vx value ().
+        -    vy (float, array-like): Solar wind Vy value.
+        -    vz (float, array-like): Solar wind Vz value.
+        -    ni (float, array-like): Solar wind ion density value.
+        -    vt (float, array-like): Solar wind ion thermal speed value.
+        -    rx (float, array-like): Wind spacecraft position x value.
+        -    ry (float, array-like): Wind spacecraft position y value.
+        -    rz (float, array-like): Wind spacecraft position z value.
+        -    tar_rx (float, array-like): Propagation target position x value.
+        -    tar_ry (float, array-like): Propagation target position y value.
+        -    tar_rz (float, array-like): Propagation target position z value.
         
         Returns:
-            input (Dataframe): Input dataframe suitable to predict from with self.predict(). 
+        --------
+        -    input (Dataframe): Input dataframe suitable to predict from with self.predict(). 
         '''
         input = pd.DataFrame(columns = self.in_keys) #Initialize single-point input dataframe
         input['B_xgsm'] = bx*np.ones(self.window) #SW BX in nT (GSM coordinates)
@@ -316,12 +314,14 @@ class prime(ks.Model):
         Load Wind spacecraft input data for PRIME in between specified date strings.
 
         Parameters:
-            start (string): The start date of the data to load ('YYYY-MM-DD')
-            end (string): The end date of the data to load ('YYYY-MM-DD')
-            pos (list): Location of propagation in GSE coordinates (Earth Radii). Default [13.25, 0, 0].
-            load_freq (string): Max length of data loaded by CdasWs. If throwing RuntimeError, try modifying this parameter. Default '3M' (three months).
+        -----------
+        -    start (string): The start date of the data to load ('YYYY-MM-DD')
+        -    end (string): The end date of the data to load ('YYYY-MM-DD')
+        -    pos (list): Location of propagation in GSE coordinates (Earth Radii). Default [13.25, 0, 0].
+        -    load_freq (string): Max length of data loaded by CdasWs. If throwing RuntimeError, try modifying this parameter. Default '3M' (three months).
         Return:
-            input (Dataframe): Input dataframe suitable to predict from with self.predict(). 
+        -------
+        -    input (Dataframe): Input dataframe suitable to predict from with self.predict(). 
         '''
         try:
             from cdasws import CdasWs
@@ -422,15 +422,12 @@ def crps_loss(y_true, y_pred):
     
     Parameters
     ----------
-    y_true : tf.Tensor
-        Ground truth values of predicted variable.
-    y_pred : tf.Tensor
-        mu and sigma^2 values of predicted distribution.
+    - y_true (tf.Tensor): Ground truth values of predicted variable.
+    - y_pred (tf.Tensor): mu and sigma^2 values of predicted distribution.
         
     Returns
     -------
-    crps : tf.Tensor
-        Continuous rank probability score.
+    - crps (tf.Tensor): Continuous rank probability score.
     """
     # Separate the parameters into means and squared standard deviations
     mu0, sg0, mu1, sg1, mu2, sg2, mu3, sg3, mu4, sg4, mu5, sg5, mu6, sg6, y_true0, y_true1, y_true2, y_true3, y_true4, y_true5, y_true6 = unstack_helper(y_true, y_pred)
@@ -455,15 +452,12 @@ def mse_metric(y_true, y_pred):
     
     Parameters
     ----------
-    y_true : tf.Tensor
-        Ground truth values of predicted variable.
-    y_pred : tf.Tensor
-        mu and sigma^2 values of predicted distribution.
+    - y_true (tf.Tensor): Ground truth values of predicted variable.
+    - y_pred (tf.Tensor): mu and sigma^2 values of predicted distribution.
         
     Returns
     -------
-    mse : tf.Tensor
-        MSE between mu and y_true.
+    - mse (tf.Tensor): MSE between mu and y_true.
     """
     # Separate the parameters into means and squared standard deviations
     # mu0, sg0, mu1, sg1, mu2, sg2, mu3, sg3, mu4, sg4, mu5, sg5, mu6, sg6, mu7, sg7, mu8, sg8 = tf.unstack(y_pred, axis=-1)
@@ -573,7 +567,7 @@ SYNTH_XPOS = np.array([69215.97057508, 69480.44662705, 69706.40911294, 69969.184
                        78717.51337097, 78918.29986461, 79151.88352716, 79384.80363257,
                        79583.88365476, 79815.48746062, 80046.43841324, 80243.83985851,
                        80473.4959342 , 80702.50977538])
-#: Synthetic MMS-1 X position for prediction at bow shock
+"""Synthetic MMS-1 X position for prediction at bow shock"""
 SYNTH_YPOS = np.array([-6242.531374  , -6141.43603983, -6054.73851884, -5953.54260001,
                        -5852.30035979, -5765.48374707, -5664.15672177, -5562.79111177,
                        -5475.87538835, -5374.44022431, -5272.97399371, -5185.97841963,
@@ -587,7 +581,7 @@ SYNTH_YPOS = np.array([-6242.531374  , -6141.43603983, -6054.73851884, -5953.542
                        -2370.97225436, -2284.122821  , -2182.83554019, -2081.58702282,
                        -1994.83737245, -1893.67203926, -1792.55094402, -1705.91518784,
                        -1604.88808488, -1503.91065025])
-#: Synthetic MMS-1 Y position for prediction at bow shock
+"""Synthetic MMS-1 Y position for prediction at bow shock"""
 SYNTH_ZPOS = np.array([1428.22663895, 1404.9257232 , 1384.88999865, 1361.43852111,
                        1337.90827722, 1317.66995298, 1293.97504102, 1270.1942372 ,
                        1249.73509015, 1225.77542686, 1201.72276543, 1181.02453785,
@@ -601,6 +595,6 @@ SYNTH_ZPOS = np.array([1428.22663895, 1404.9257232 , 1384.88999865, 1361.4385211
                        462.13065323,  438.0606711 ,  409.81356785,  381.39897532,
                        356.89834051,  328.14264026,  299.21335127,  274.26632698,
                        244.98385268,  215.52178328])
-#: Synthetic MMS-1 Z position for prediction at bow shock
+"""Synthetic MMS-1 Z position for prediction at bow shock"""
 SYNTH_POS = np.array([SYNTH_XPOS, SYNTH_YPOS, SYNTH_ZPOS]).T
-#: Synthetic MMS-1 orbit for prediction at bow shock
+"""Synthetic MMS-1 orbit for prediction at bow shock"""

@@ -16,10 +16,24 @@
     <nav class="pdoc">
         <label id="navtoggle" for="togglestate" class="pdoc-button"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><path stroke-linecap='round' stroke="currentColor" stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/></svg></label>
         <input id="togglestate" type="checkbox" aria-hidden="true" tabindex="-1">
-        <div>
+        <div>            <a class="pdoc-button module-list-button" href="index.html">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
+  <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
+</svg>                &nbsp;
+                Module Index
+            </a>
+
 
             <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
                    pattern=".+" required>
+
+            <h2>Contents</h2>
+            <ul>
+  <li><a href="#why-use-prime">Why Use PRIME?</a></li>
+  <li><a href="#predicting-with-prime">Predicting with PRIME</a></li>
+  <li><a href="#citation">Citation</a></li>
+</ul>
 
 
             <h2>Submodules</h2>
@@ -41,10 +55,76 @@
                     <h1 class="modulename">
 primesw    </h1>
 
-                
-                
-                
-                
+                        <div class="docstring"><p>Python package <code><a href="">primesw</a></code> is an implementation of the Probabilistic Regressor for Input to the Magnetosphere Estimation (PRIME) L1-to-Earth solar wind propagation algorithm.
+For details on the algorithm development, see the <a href="https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full">paper</a>.
+Install with:</p>
+
+<pre><code>pip install primesw
+</code></pre>
+
+<h2 id="why-use-prime">Why Use PRIME?</h2>
+
+<p>PRIME is a probabilistic recurrent neural network trained to predict the solar wind conditions just upstream of Earth's bow shock using measurements of the solar wind at the first Earth-Sun Lagrange point (L1). PRIME is capable of predicting:</p>
+
+<ul>
+<li>Solar wind flow velocity vector (km/s) in GSE coordinates</li>
+<li>Interplanetary magnetic field vector (nT) in GSM coordinates</li>
+<li>Solar wind plasma number density (cm^-3)</li>
+</ul>
+
+<p>PRIME's predictions consist of a mean and a variance defining a Gaussian probability distribution for each parameter. 
+Users can use these distributions to define confidence intervals, error bars, or another measure of uncertainty suited for the user's task.
+PRIME's probability distributions are reliable to within 3.5% on average, and the means of the distribution are shown to be more accurate predictors of the solar wind than the outputs of other common solar wind propagation algorithms (see the <a href="https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full">paper</a> for more details).</p>
+
+<h2 id="predicting-with-prime">Predicting with PRIME</h2>
+
+<p>Making predictions with PRIME using the <code><a href="">primesw</a></code> package is done using the <code><a href="primesw/prime.html">primesw.prime</a></code> class. <code><a href="primesw/prime.html">primesw.prime</a></code> objects wrap an instance of PRIME that can be used to predict the solar wind conditions at Earth's bow shock nose given a time range:</p>
+
+<pre><code>import primesw as psw
+propagator = psw.prime()
+propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
+</code></pre>
+
+<p><code><a href="primesw/prime.html">primesw.prime</a></code> objects can also make predictions at locations other than Earth's bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:</p>
+
+<pre><code>propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00', pos = [13, 5, 0])
+</code></pre>
+
+<p>Users can also generate synthetic L1 solar wind data using the <code>primesw.prime.build_synth_input</code> method in order to use PRIME to study solar wind propagtion in a theoretical sense. It is not recommended to use PRIME to predict the solar wind in areas it was not trained on, or using inputs outside the range of solar wind conditions it was trained on.</p>
+
+<h2 id="citation">Citation</h2>
+
+<p>If you make use of PRIME, please cite it:</p>
+
+<pre><code>@article{obrien_prime_2023,
+    title = {{PRIME}: a probabilistic neural network approach to solar wind propagation from {L1}},
+    volume = {10},
+    issn = {2296-987X},
+    shorttitle = {{PRIME}},
+    url = {https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full},
+    doi = {10.3389/fspas.2023.1250779},
+    urldate = {2023-11-13},
+    journal = {Frontiers in Astronomy and Space Sciences},
+    author = {O’Brien, Connor and Walsh, Brian M. and Zou, Ying and Tasnim, Samira and Zhang, Huaming and Sibeck, David Gary},
+    month = sep,
+    year = {2023},
+    pages = {1250779},
+}
+</code></pre>
+</div>
+
+                        <input id="mod-primesw-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+
+                        <label class="view-source-button" for="mod-primesw-view-source"><span>View Source</span></label>
+
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos">2</span></a><span class="sd">.. include:: mainpage.md</span>
+</span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a>
+</span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.prime</span><span class="w"> </span><span class="kn">import</span> <span class="n">prime</span>
+</span></pre></div>
+
+
             </section>
     </main>
 <script>
