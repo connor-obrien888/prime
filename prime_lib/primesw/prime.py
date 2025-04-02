@@ -8,6 +8,8 @@ import joblib
 
 __all__ = ['prime', 'crps_loss', 'mse_metric'] # Here __all__ is defined so that pdoc only documents these identifiers. Other functions are not worth documenting or should not be accessed.
 
+__version__ = '0.4.0'
+
 class prime(ks.Model):
     '''
         Class to wrap a keras model to be used with the SW-trained PRIME architecture. It is recommended to instantiate `prime` objects in their default configuration:
