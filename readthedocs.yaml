@@ -10,9 +10,9 @@ build:
 python:
   install:
     - requirements: docs/requirements.txt
-    # install PlasmaCalcs before building the docs:
+    # install primesw before building the docs:
     - method: pip
-      path: .
+      path: ./prime_lib
 
 sphinx:
   configuration: docs/source/conf.py

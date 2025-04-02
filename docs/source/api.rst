@@ -6,4 +6,4 @@ API
    :template: custom_module_template.rst
    :recursive:
 
-   PlasmaCalcs
+   primesw

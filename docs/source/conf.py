@@ -7,11 +7,11 @@ import os
 import sys
 
 from primesw import __version__
-from primesw import DocstringInfo
+# from primesw import DocstringInfo
 
 # Source code dir relative to this file;
 # used by api.rst's autosummary
-sys.path.insert(0, os.path.abspath(os.path.join('..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join('..', '..','prime_lib')))
 
 
 # -- Project information
@@ -95,5 +95,5 @@ html_theme = 'sphinx_rtd_theme'
 #         newlines = di.to_sphinx_lines()
 #         lines0[:] = newlines
 
-def setup(app):
-    app.connect("autodoc-process-docstring", reformat_pc_docstrings)
+# def setup(app):
+#     app.connect("autodoc-process-docstring", reformat_pc_docstrings)
