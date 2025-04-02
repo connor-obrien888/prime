@@ -17,10 +17,10 @@ requires-python = ">=3.8,<3.11"
 dependencies = [
       "tensorflow==2.8.0",
       "matplotlib>=3.4",
-      "pandas>=1.2",
+      "pandas (>=1.2,<2.0)",
       "scipy>=1.6",
       "scikit-learn>=0.24",
-      "numpy>=1.20.3",
+      "numpy (>=1.20.3,<2.0.0)",
       "protobuf==3.20.0",
       "tables (>=3.8.0,<4.0.0)",
       "tensorflow-io-gcs-filesystem==0.25.0",
