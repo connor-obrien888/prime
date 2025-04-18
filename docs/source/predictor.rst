@@ -1,5 +1,7 @@
-API
+Predictor Classes
 ===
+
+Accessing the PRIME and PRIME-SH algorithms is done with the `prime` and `primesh` classes:
 
 .. autosummary::
    :toctree: generated
@@ -8,3 +10,5 @@ API
 
    primesw.prime
    primesw.primesh
+
+

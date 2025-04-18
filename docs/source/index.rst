@@ -1,7 +1,7 @@
-Welcome to PlasmaCalcs's documentation!
+Welcome to PRIME's documentation!
 =======================================
 
-`primesw` is an implementation of the Probabilistic Regressor for Input to the Magnetosphere Estimation (PRIME) L1-to-Earth solar wind propagation algorithm.
+``primesw`` is an implementation of the Probabilistic Regressor for Input to the Magnetosphere Estimation (PRIME) L1-to-Earth solar wind propagation algorithm.
 For details on the algorithm development, see the `paper <https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full>`_.
 Install using pip:
 
@@ -29,7 +29,7 @@ PRIME's probability distributions are reliable to within 3.5% on average, and th
 Predicting with PRIME
 ---------------------
 
-Making predictions with PRIME using the `primesw` package is done using the `primesw.prime` class. `primesw.prime` objects wrap an instance of PRIME that can be used to predict the solar wind conditions at Earth's bow shock nose given a time range:
+Making predictions with PRIME using the ``primesw`` package is done using the ``primesw.prime`` class. ``primesw.prime`` objects wrap an instance of PRIME that can be used to predict the solar wind conditions at Earth's bow shock nose given a time range:
 
 .. code-block:: console
 
@@ -38,41 +38,42 @@ Making predictions with PRIME using the `primesw` package is done using the `pri
    propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
 
 
-`primesw.prime` objects can also make predictions at locations other than Earth's bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:
+``primesw.prime`` objects can also make predictions at locations other than Earth's bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:
 
 .. code-block:: console
 
    propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00', pos = [13, 5, 0])
 
 
-Users can also generate synthetic L1 solar wind data using the `primesw.prime.build_synth_input` method in order to use PRIME to study solar wind propagtion in a theoretical sense. It is not recommended to use PRIME to predict the solar wind in areas it was not trained on, or using inputs outside the range of solar wind conditions it was trained on.
+Users can also generate synthetic L1 solar wind data using the ``primesw.prime.build_synth_input`` method in order to use PRIME to study solar wind propagtion in a theoretical sense. It is not recommended to use PRIME to predict the solar wind in areas it was not trained on, or using inputs outside the range of solar wind conditions it was trained on.
 
 Citation
 --------
 If you make use of PRIME, please cite it:
-```
-@article{obrien_prime_2023,
-	title = {{PRIME}: a probabilistic neural network approach to solar wind propagation from {L1}},
-	volume = {10},
-	issn = {2296-987X},
-	shorttitle = {{PRIME}},
-	url = {https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full},
-	doi = {10.3389/fspas.2023.1250779},
-	urldate = {2023-11-13},
-	journal = {Frontiers in Astronomy and Space Sciences},
-	author = {O’Brien, Connor and Walsh, Brian M. and Zou, Ying and Tasnim, Samira and Zhang, Huaming and Sibeck, David Gary},
-	month = sep,
-	year = {2023},
-	pages = {1250779},
-}
-```
+
+.. code-block:: console
+	@article{obrien_prime_2023,
+		title = {{PRIME}: a probabilistic neural network approach to solar wind propagation from {L1}},
+		volume = {10},
+		issn = {2296-987X},
+		shorttitle = {{PRIME}},
+		url = {https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full},
+		doi = {10.3389/fspas.2023.1250779},
+		urldate = {2023-11-13},
+		journal = {Frontiers in Astronomy and Space Sciences},
+		author = {O’Brien, Connor and Walsh, Brian M. and Zou, Ying and Tasnim, Samira and Zhang, Huaming and Sibeck, David Gary},
+		month = sep,
+		year = {2023},
+		pages = {1250779},
+	}
 
 Contents
 --------
 
-**primesw** has two submodules, one for solar wind prediction (**prime**) and one for magnetosheath prediction (**primesh**).
+``primesw`` has two submodules, one for solar wind prediction (``prime``) and one for magnetosheath prediction (``primesh``).
 
 .. toctree::
+	:maxdepth: 2
 
-   usage
-   api
+	usage
+	predictor

@@ -10,7 +10,7 @@ import sys
 # from primesw import DocstringInfo
 
 # Source code dir relative to this file;
-# used by api.rst's autosummary
+# used by predictor.rst's autosummary
 sys.path.insert(0, os.path.abspath(os.path.join('..', '..','prime_lib')))
 
 
@@ -31,6 +31,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
 ]
+
+autosummary_generate = True # Turn on sphinx.ext.autosummary
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
