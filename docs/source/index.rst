@@ -73,7 +73,6 @@ Contents
 ``primesw`` has two submodules, one for solar wind prediction (``prime``) and one for magnetosheath prediction (``primesh``).
 
 .. toctree::
-	:maxdepth: 2
 
 	usage
 	predictor
