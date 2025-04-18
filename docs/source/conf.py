@@ -6,7 +6,7 @@
 import os
 import sys
 
-from primesw import __version__
+# from primesw import __version__
 # from primesw import DocstringInfo
 
 # Source code dir relative to this file;
@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.abspath(os.path.join('..', '..','prime_lib')))
 # -- Project information
 
 project = 'primesw'
-release = __version__
-version = __version__
+release = '0.4.0' #__version__
+version = '0.4.0' #__version__
 copyright = '2025, primesw Developers'
 
 

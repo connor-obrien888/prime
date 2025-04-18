@@ -6,4 +6,5 @@ API
    :template: custom_module_template.rst
    :recursive:
 
-   primesw
+   primesw.prime
+   primesw.primesh

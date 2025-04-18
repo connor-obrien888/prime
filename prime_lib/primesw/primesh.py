@@ -7,7 +7,7 @@ from sklearn.preprocessing import RobustScaler #RobustScaler is used to scale th
 import joblib
 from .prime import prime, crps_loss, mse_metric
 
-__all__ = ['primesh', 'jelinek_bs', 'shue_mp'] # Here __all__ is defined so that pdoc only documents these identifiers. Other functions are not worth documenting or should not be accessed.
+__all__ = ['primesh', 'jelinek_bs', 'shue_mp'] # Here __all__ is defined so that docs tools can read the appropriate docstrings
 
 class primesh(prime):
     '''

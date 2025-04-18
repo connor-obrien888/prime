@@ -16,7 +16,7 @@ You can also find the latest version on `GitHub <https://github.com/connor-obrie
    This project is still under active development. This note was last updated on April 2, 2025.
 
 Why Use PRIME?
--------
+--------------
 PRIME is a probabilistic recurrent neural network trained to predict the solar wind conditions just upstream of Earth's bow shock using measurements of the solar wind at the first Earth-Sun Lagrange point (L1). PRIME is capable of predicting:
 - Solar wind flow velocity vector (km/s) in GSE coordinates
 - Interplanetary magnetic field vector (nT) in GSM coordinates
@@ -27,7 +27,7 @@ Users can use these distributions to define confidence intervals, error bars, or
 PRIME's probability distributions are reliable to within 3.5% on average, and the means of the distribution are shown to be more accurate predictors of the solar wind than the outputs of other common solar wind propagation algorithms (see the [paper](https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full) for more details).
 
 Predicting with PRIME
-----------
+---------------------
 
 Making predictions with PRIME using the `primesw` package is done using the `primesw.prime` class. `primesw.prime` objects wrap an instance of PRIME that can be used to predict the solar wind conditions at Earth's bow shock nose given a time range:
 

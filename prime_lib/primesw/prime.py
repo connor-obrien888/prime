@@ -6,13 +6,10 @@ import tensorflow.keras as ks
 from sklearn.preprocessing import RobustScaler #RobustScaler is used to scale the input/target data but is not called directly below
 import joblib
 
-__all__ = ['prime', 'crps_loss', 'mse_metric'] # Here __all__ is defined so that pdoc only documents these identifiers. Other functions are not worth documenting or should not be accessed.
+__all__ = ['prime', 'crps_loss', 'mse_metric'] # Here __all__ is defined so that docs tools can read the appropriate docstrings
 
-__version__ = '0.4.0'
-
-class prime(ks.Model):
-    '''
-        Class to wrap a keras model to be used with the SW-trained PRIME architecture. It is recommended to instantiate `prime` objects in their default configuration:
+class prime():
+    """Class to wrap a keras model to be used with the SW-trained PRIME architecture. It is recommended to instantiate `prime` objects in their default configuration:
         ```
         import primesw as psw
         propagator = psw.prime()
@@ -23,7 +20,7 @@ class prime(ks.Model):
         When instantiating a `prime` object, one can specify a predefined `model` to be used instead of the automatically-loaded PRIME model. 
         In that case, the scaling functions for the input and target datasets (`in_scaler` and `tar_scaler`), the input and target features (`in_keys` and `tar_keys`), and the output features (`out_keys`) must be specified.
         The full list of arguments that can be passed to `prime` is given below.
-    '''
+    """
     def __init__(self, model = None, in_scaler = None, tar_scaler = None, in_keys = None, tar_keys = None, out_keys = None, hps = [60, 15, 5.0/60.0]):
         '''
         `hps` is an array of dataset-pertinent hyperparameters. The three elements correspond to `window`, `input`, and `stride`:
@@ -106,8 +103,7 @@ class prime(ks.Model):
             self.model = model
 
     def predict(self, input = None, start = None, stop = None, pos = [13.25, 0, 0]):
-        '''
-        Method that produces a dataframe of PRIME solar wind predictions.
+        """Method that produces a dataframe of PRIME solar wind predictions.
         To generate solar wind predictions from Wind spacecraft data, specify `start` and `stop` times for the desired prediction.
         `start` and `stop` are strings with format 'YYYY-MM-DD HH:MM:SS'.
         ```
@@ -133,7 +129,7 @@ class prime(ks.Model):
         ```
         All positions are in GSE coordinates with units of Earth Radii.
         It is not recommended to make predictions outside of the region PRIME was trained on (within 30 Earth radii of the Earth on the dayside).
-        '''
+        """
         if input is None:
             if (start is not None)&(stop is not None):
                 input = self.build_real_input(start = start, stop = stop, pos = pos)
