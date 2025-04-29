@@ -6,7 +6,7 @@ PRIME (Probabilistic Regressor for Input to the Magnetosphere Estimation) is a p
 pip install primesw
 ```
 
-For usage, read the [documentation](https://connor-obrien888.github.io/prime/primesw.html).
+For usage, read the [documentation](https://primesw.readthedocs.io/en/latest/).
 
 For information on PRIME, including results from its validation and caveats on its use, please see the [paper](https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full).
 

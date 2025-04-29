@@ -1,0 +1,4 @@
+Sphinx autodoc default doesn't provide a page for every function...
+
+This folder uses the workaround described here:
+https://stackoverflow.com/a/62613202

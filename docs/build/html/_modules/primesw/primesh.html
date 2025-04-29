@@ -1,0 +1,373 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>primesw.primesh &mdash; primesw 0.4.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=4e78f113"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            primesw
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">primesw</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">primesw.primesh</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for primesw.primesh</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">importlib.resources</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow.keras</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ks</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">RobustScaler</span> <span class="c1">#RobustScaler is used to scale the input/target data but is not called directly below</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">joblib</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.prime</span><span class="w"> </span><span class="kn">import</span> <span class="n">prime</span><span class="p">,</span> <span class="n">crps_loss</span><span class="p">,</span> <span class="n">mse_metric</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;primesh&#39;</span><span class="p">,</span> <span class="s1">&#39;jelinek_bs&#39;</span><span class="p">,</span> <span class="s1">&#39;shue_mp&#39;</span><span class="p">]</span> <span class="c1"># Here __all__ is defined so that docs tools can read the appropriate docstrings</span>
+
+<div class="viewcode-block" id="primesh"><a class="viewcode-back" href="../../sh.html#primesw.primesh">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">primesh</span><span class="p">(</span><span class="n">prime</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        This class wraps an instance of PRIME-SH for solar wind prediciton.</span>
+
+<span class="sd">        When instantiating a ``primesh`` object, one can specify a predefined ``model`` to be used instead of the automatically-loaded PRIME-SH model. </span>
+<span class="sd">        In that case, the scaling functions for the input and target datasets (``in_scaler`` and ``tar_scaler``), the input and target features (``in_keys`` and ``tar_keys``), and the output features (``out_keys``) must be specified.</span>
+<span class="sd">        The full list of arguments that can be passed to ``primesh`` is given below.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">in_scaler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tar_scaler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">loc_scaler</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">in_keys</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tar_keys</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">out_keys</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">hps</span> <span class="o">=</span> <span class="p">[</span><span class="mi">55</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        :param model: Keras model for predicitons. If None, PRIME-SH is loaded from the package. </span>
+<span class="sd">        :param in_scaler: Scikitlearn preprocessing scaler for input arrays. If None, pre-fit RobustScaler is loaded from the package.</span>
+<span class="sd">        :param tar_scaler: Scikitlearn preprocessing scaler for output arrays. If None, pre-fit RobustScaler is loaded from the package.</span>
+<span class="sd">        :param tar_scaler: Scikitlearn preprocessing scaler for target location arrays. If None, pre-fit RobustScaler is loaded from the package.</span>
+<span class="sd">        :param in_keys: Features used as inputs. If None, defaults are loaded from the package.</span>
+<span class="sd">        :param tar_keys: Features used as targets. If None, defaults are loaded from the package.</span>
+<span class="sd">        :param out_keys: Features used as outputs. If None, defaults are loaded from the package.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">primesh</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">in_scaler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">resource_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s1">&#39;primesw&#39;</span><span class="p">,</span> <span class="s1">&#39;primeshinsc_v0.1.0.pkl&#39;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">resource_path</span> <span class="k">as</span> <span class="n">in_scaler_file</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">in_scaler</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">in_scaler_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">in_scaler</span> <span class="o">=</span> <span class="n">in_scaler</span>
+        <span class="k">if</span> <span class="n">tar_scaler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">resource_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s1">&#39;primesw&#39;</span><span class="p">,</span> <span class="s1">&#39;primeshtarsc_v0.1.0.pkl&#39;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">resource_path</span> <span class="k">as</span> <span class="n">tar_scaler_file</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">tar_scaler_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span> <span class="o">=</span> <span class="n">tar_scaler</span>
+        <span class="k">if</span> <span class="n">loc_scaler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">resource_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s1">&#39;primesw&#39;</span><span class="p">,</span> <span class="s1">&#39;primeshlocsc_v0.1.0.pkl&#39;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">resource_path</span> <span class="k">as</span> <span class="n">loc_scaler_file</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">loc_scaler</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">loc_scaler_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">loc_scaler</span> <span class="o">=</span> <span class="n">loc_scaler</span>
+        <span class="k">if</span> <span class="n">in_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">in_keys</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;B_xgsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_ygsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_zgsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_xgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_ygse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_zgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Ni&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vth&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;R_xgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;R_ygse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;R_zgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;target_R_xgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;target_R_ygse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;target_R_zgse&quot;</span><span class="p">,</span>
+            <span class="p">]</span>  <span class="c1"># Wind data keys to include in input dataset</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">in_keys</span> <span class="o">=</span> <span class="n">in_keys</span>
+        <span class="k">if</span> <span class="n">tar_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tar_keys</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;B_xgsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_ygsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_zgsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_xgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_ygse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_zgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Ni&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Tipar&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Tiperp&quot;</span><span class="p">,</span>
+            <span class="p">]</span>  <span class="c1"># Targets from MMS dataset to match with input data</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tar_keys</span> <span class="o">=</span> <span class="n">tar_keys</span>
+        <span class="k">if</span> <span class="n">out_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_keys</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;B_xgsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_xgsm_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_ygsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_ygsm_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_zgsm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;B_zgsm_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_xgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_xgse_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_ygse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_ygse_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_zgse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Vi_zgse_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Ni&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Ni_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Tipar&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Tipar_sig&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Tiperp&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Tiperp_sig&quot;</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">out_keys</span> <span class="o">=</span> <span class="n">out_keys</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">=</span> <span class="n">hps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#Input window length from hyperparameter list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="n">hps</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="c1">#Input stride length from hyperparameter list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fraction</span> <span class="o">=</span> <span class="n">hps</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="c1">#Input maximum tolerable fraction of interpolated data from hyperparameter list</span>
+        <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># self.model = self.build_model() # Instantiate model architecture with hyperparameters</span>
+            <span class="n">resource_path</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="s1">&#39;primesw&#39;</span><span class="p">,</span> <span class="s1">&#39;primesh_v0.1.0.keras&#39;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">resource_path</span> <span class="k">as</span> <span class="n">model_weights_file</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">ks</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">model_weights_file</span><span class="p">,</span> <span class="n">custom_objects</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;crps_loss&#39;</span> <span class="p">:</span> <span class="n">crps_loss</span><span class="p">,</span> <span class="s1">&#39;mse_metric&#39;</span> <span class="p">:</span> <span class="n">mse_metric</span><span class="p">})</span>  <span class="c1"># Load the saved model</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        
+<div class="viewcode-block" id="primesh.predict_raw"><a class="viewcode-back" href="../../sh.html#primesw.primesh.predict_raw">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">predict_raw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Wrapper function to predict with a keras model. Differs from `prime.predict_raw` by the inclusion of separate location scaling. Not recommended for direct use, see `prime.predict` instead.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">loc_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loc_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="nb">input</span><span class="p">[:,</span> <span class="mi">11</span><span class="p">:</span><span class="mi">14</span><span class="p">])</span> <span class="c1">#Get the target position from input, scale separately</span>
+        <span class="n">input_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+        <span class="n">input_scaled</span><span class="p">[:,</span><span class="mi">11</span><span class="p">:</span><span class="mi">14</span><span class="p">]</span> <span class="o">=</span> <span class="n">loc_scaled</span> <span class="c1">#Reinsert scaled location</span>
+        <span class="n">input_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">input_scaled</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_keys</span><span class="p">)))</span>  <span class="c1"># Reshape input data to be 3D</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">input_scaled</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="n">input_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">input_scaled</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">)]</span>  <span class="c1"># Move the 55 unit window through the input data</span>
+        <span class="n">output_unscaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">input_arr</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">output_unscaled</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_keys</span><span class="p">)))</span>  <span class="c1"># Stage output data to be 2x target dimensions</span>
+        <span class="n">output</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">output_unscaled</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># Mean values</span>
+        <span class="n">output</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">output_unscaled</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">output_unscaled</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">output_unscaled</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]))</span>  <span class="c1"># Standard deviations</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+    
+<div class="viewcode-block" id="primesh.predict_grid"><a class="viewcode-back" href="../../sh.html#primesw.primesh.predict_grid">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">predict_grid</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">gridsize</span><span class="p">,</span>
+        <span class="n">x_extent</span><span class="p">,</span>
+        <span class="n">framenum</span><span class="p">,</span>
+        <span class="n">bx</span><span class="p">,</span>
+        <span class="n">by</span><span class="p">,</span>
+        <span class="n">bz</span><span class="p">,</span>
+        <span class="n">vx</span><span class="p">,</span>
+        <span class="n">vy</span><span class="p">,</span>
+        <span class="n">vz</span><span class="p">,</span>
+        <span class="n">ni</span><span class="p">,</span>
+        <span class="n">vt</span><span class="p">,</span>
+        <span class="n">rx</span><span class="p">,</span>
+        <span class="n">ry</span><span class="p">,</span>
+        <span class="n">rz</span><span class="p">,</span>
+        <span class="n">y_extent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">z_extent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">loc_mask</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">subtract_ecliptic</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate predictions from PRIME on a grid of points in GSE coordinates.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        -    gridsize (float): Spacing of grid points (RE)</span>
+<span class="sd">        -    x_extent (list): Range of x values to calculate on (GSE RE).</span>
+<span class="sd">        -    framenum (int): Number of frames to calculate (GSE RE).</span>
+<span class="sd">        -    bx (float, array-like): IMF Bx value (nT). If array like, must be of length framenum.</span>
+<span class="sd">        -    by (float, array-like): IMF By value (nT). If array like, must be of length framenum.</span>
+<span class="sd">        -    bz (float, array-like): IMF Bz value (nT). If array like, must be of length framenum.</span>
+<span class="sd">        -    vx (float, array-like): Solar wind Vx value (km/s). If array like, must be of length framenum.</span>
+<span class="sd">        -    vy (float, array-like): Solar wind Vy value (km/s). If array like, must be of length framenum.</span>
+<span class="sd">        -    vz (float, array-like): Solar wind Vz value (km/s). If array like, must be of length framenum.</span>
+<span class="sd">        -    ni (float, array-like): Solar wind ion density value (cm^-3). If array like, must be of length framenum.</span>
+<span class="sd">        -    vt (float, array-like): Solar wind ion thermal speed value (km/s). If array like, must be of length framenum.</span>
+<span class="sd">        -    rx (float, array-like): Wind spacecraft position x value (GSE RE). If array like, must be of length framenum.</span>
+<span class="sd">        -    ry (float, array-like): Wind spacecraft position y value (GSE RE). If array like, must be of length framenum.</span>
+<span class="sd">        -    rz (float, array-like): Wind spacecraft position z value (GSE RE). If array like, must be of length framenum.</span>
+<span class="sd">        -    y_extent (list): Range of y values to calculate on (GSE RE). If None, z_extent must be specified.</span>
+<span class="sd">        -    z_extent (list): Range of z values to calculate on (GSE RE). If None, y_extent must be specified.</span>
+<span class="sd">        -    y (float, array-like): Y position (GSE RE) that is held constant if y_extent is not specified. Default 0.</span>
+<span class="sd">        -    z (float, array-like): Z position (GSE RE) that is held constant if z_extent is not specified. Default 0.</span>
+<span class="sd">        -    subtract_ecliptic (bool): Whether or not to subtract the Earth&#39;s motion in the ecliptic from Vy. Default False.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">        --------</span>
+<span class="sd">        -    output_grid (ndarray): Array of predicted values on the grid. Shape (framenum, x_extent/gridsize, y_extent/gridsize, 14). Features as in `prime.out_keys`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">x_extent</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x_extent</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gridsize</span><span class="p">)</span>  <span class="c1"># Create a grid to calculate the magnetosheath conditions on</span>
+        <span class="n">y_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">y</span><span class="p">])</span> <span class="c1"># This array is overwritten if y_extent is specified</span>
+        <span class="n">z_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">z</span><span class="p">])</span> <span class="c1"># This array is overwritten if z_extent is specified</span>
+        <span class="k">if</span> <span class="n">y_extent</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">z_extent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must specify y_extent or z_extent&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y_extent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">y_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">y_extent</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y_extent</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gridsize</span><span class="p">)</span>  <span class="c1"># Y positions to calculate the magnetosheath conditions on</span>
+        <span class="k">if</span> <span class="n">z_extent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">z_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">z_extent</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">z_extent</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gridsize</span><span class="p">)</span>  <span class="c1"># Z positions to calculate the magnetosheath conditions on</span>
+        <span class="n">x_grid</span><span class="p">,</span> <span class="n">y_grid</span><span class="p">,</span> <span class="n">z_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x_arr</span><span class="p">,</span> <span class="n">y_arr</span><span class="p">,</span> <span class="n">z_arr</span><span class="p">)</span>  <span class="c1"># Create a grid to calculate the magnetosheath conditions on</span>
+        <span class="n">input_seed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span> <span class="o">*</span> <span class="n">framenum</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_keys</span><span class="p">)))</span>  <span class="c1"># Initialize array to hold the input data before unfolding it</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">bx</span><span class="p">,</span> <span class="n">by</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">vx</span><span class="p">,</span> <span class="n">vy</span><span class="p">,</span> <span class="n">vz</span><span class="p">,</span> <span class="n">ni</span><span class="p">,</span> <span class="n">vt</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">ry</span><span class="p">,</span> <span class="n">rz</span><span class="p">]):</span>  <span class="c1"># Loop through the input data and repeat it</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">iter</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>  <span class="c1"># Check if the element is iterable</span>
+                <span class="n">input_seed</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>  <span class="c1"># If it is, repeat it for each grid point</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>  <span class="c1"># This error throws if iter(element) fails (i.e. element is not iterable)</span>
+                <span class="n">input_seed</span><span class="p">[:,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="n">framenum</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>  <span class="c1"># If it isn&#39;t, repeat it for each grid point *and frame*</span>
+        <span class="n">loc_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span> <span class="o">*</span> <span class="n">framenum</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>  <span class="c1"># Initialize array to hold the location data</span>
+        <span class="n">loc_arr</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">x_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">framenum</span><span class="p">)</span>
+        <span class="n">loc_arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">y_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">framenum</span><span class="p">)</span>
+        <span class="n">loc_arr</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">z_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">framenum</span><span class="p">)</span>
+        <span class="n">input_seed_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">input_seed</span><span class="p">)</span>  <span class="c1"># Scale the input data</span>
+        <span class="n">input_seed_scaled</span><span class="p">[:,</span> <span class="mi">11</span><span class="p">:</span><span class="mi">14</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loc_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">loc_arr</span><span class="p">)</span>  <span class="c1"># Scale the location data</span>
+        <span class="n">input_seed_scaled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">input_seed_scaled</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># Repeat the input data 55 times to make static timeseries</span>
+        <span class="n">input_arr</span> <span class="o">=</span> <span class="n">input_seed_scaled</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_grid</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span> <span class="o">*</span> <span class="n">framenum</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_keys</span><span class="p">))</span>  <span class="c1"># Reshape the input data into the correct shape</span>
+        <span class="n">output_arr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">input_arr</span><span class="p">)</span>  <span class="c1"># Predict the output data</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">output_arr</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_keys</span><span class="p">)))</span>  <span class="c1"># Stage output data to be 2x target dimensions</span>
+        <span class="n">output</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">output_arr</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">])</span>  <span class="c1"># Mean values</span>
+        <span class="n">output</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">output_arr</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">output_arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">])</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tar_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">output_arr</span><span class="p">[:,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]))</span>  <span class="c1"># Standard deviations</span>
+        <span class="n">output_grid</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">framenum</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_arr</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_arr</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">z_arr</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_keys</span><span class="p">))</span>  <span class="c1"># Reshape the output data into the correct shape</span>
+        <span class="n">output_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">output_grid</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># Move the y axis to the second axis (new order is frame, x, y, z, param)</span>
+        <span class="k">if</span> <span class="n">loc_mask</span><span class="p">:</span>
+            <span class="n">r_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x_grid</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y_grid</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z_grid</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># radial distance to origin at all grid points</span>
+            <span class="n">rho_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y_grid</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z_grid</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># radial distance to x axis at all grid points</span>
+            <span class="n">theta_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">rho_grid</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">x_grid</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># Angular distance to x axis for all grid points</span>
+            <span class="n">output_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">output_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>  <span class="c1"># Initialize array to hold the frame mask</span>
+            <span class="c1"># Make a mask for all points outside the bow shock or inside the magnetopause</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">framenum</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">framenum</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>  <span class="c1"># If there is only one frame turn pdyn and bz into iterables</span>
+                    <span class="n">pdyn_iter</span> <span class="o">=</span> <span class="p">[</span><span class="n">ni</span> <span class="o">*</span> <span class="n">vx</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="mf">1.673e-6</span><span class="p">]</span>  <span class="c1"># Dynamic pressure (nPa)</span>
+                    <span class="n">bz_iter</span> <span class="o">=</span> <span class="p">[</span><span class="n">bz</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">pdyn_iter</span> <span class="o">=</span> <span class="n">ni</span> <span class="o">*</span> <span class="n">vx</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="mf">1.673e-6</span>
+                    <span class="n">bz_iter</span> <span class="o">=</span> <span class="n">bz</span>
+                <span class="n">bs_array</span> <span class="o">=</span> <span class="n">jelinek_bs</span><span class="p">(</span><span class="n">rho_grid</span><span class="p">,</span> <span class="n">pdyn_iter</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">mp_array</span> <span class="o">=</span> <span class="n">shue_mp</span><span class="p">(</span><span class="n">theta_grid</span><span class="p">,</span> <span class="n">pdyn_iter</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">bz_iter</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_keys</span><span class="p">)):</span>
+                    <span class="n">output_mask</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:</span> <span class="p">,</span> <span class="p">:,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">swapaxes</span><span class="p">(</span><span class="n">x_grid</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">bs_array</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">r_grid</span> <span class="o">&lt;</span> <span class="n">mp_array</span><span class="p">)</span>
+            <span class="c1"># Make a masked version of the output grid</span>
+            <span class="n">output_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ma</span><span class="o">.</span><span class="n">masked_array</span><span class="p">(</span><span class="n">output_grid</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">output_mask</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">subtract_ecliptic</span><span class="p">:</span>  <span class="c1"># If subtract_ecliptic is true, subtract the Earth&#39;s motion in the ecliptic from Vy</span>
+            <span class="n">output_grid</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">8</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">29.8</span>
+        <span class="k">return</span> <span class="n">output_grid</span></div></div>
+    
+<span class="c1"># Analytic surface functions for bow shock and magnetopause</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">jelinek_bs</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">pdyn</span><span class="p">,</span> <span class="n">r0</span><span class="o">=</span><span class="mf">15.02</span><span class="p">,</span> <span class="n">l</span><span class="o">=</span><span class="mf">1.17</span><span class="p">,</span> <span class="n">e</span><span class="o">=</span><span class="mf">6.55</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Bow shock model from Jelinek et al 2012. Assumes GSE Z=0 RE.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    -    y (float): GSE Y coordinate (RE)</span>
+<span class="sd">    -    pdyn (float): Solar wind dynamic pressure (nPa)</span>
+<span class="sd">    -    r0 (float): Bow shock average standoff distance tuning parameter (RE)</span>
+<span class="sd">    -    l (float): Lambda tuning parameter</span>
+<span class="sd">    -    e (float): Epsilon tuning parameter</span>
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    -    bs_x (float): GSE X position of bow shock (RE)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bs_x</span> <span class="o">=</span> <span class="n">r0</span> <span class="o">*</span> <span class="p">(</span><span class="n">pdyn</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="n">e</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">l</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">r0</span> <span class="o">*</span> <span class="p">(</span><span class="n">pdyn</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="n">e</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">bs_x</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">shue_mp</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="n">pdyn</span><span class="p">,</span> <span class="n">bz</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Magnetopause model from Shue et al 1998. Assumes GSE Z=0 RE.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    -    theta (float): Polar angle position of desired MP location (radians)</span>
+<span class="sd">    -    pdyn (float): Solar wind dynamic pressure (nPa)</span>
+<span class="sd">    -    bz (float): IMF Bz (nT)</span>
+<span class="sd">    Returns:</span>
+<span class="sd">    -    rmp (float): Magnetopause radial distance to Earth (RE)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">r0</span> <span class="o">=</span> <span class="p">(</span><span class="mf">10.22</span> <span class="o">+</span> <span class="mf">1.29</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="mf">0.184</span> <span class="o">*</span> <span class="p">(</span><span class="n">bz</span> <span class="o">+</span> <span class="mf">8.14</span><span class="p">)))</span> <span class="o">*</span> <span class="p">(</span><span class="n">pdyn</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mf">6.6</span><span class="p">))</span>
+    <span class="n">a1</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.58</span> <span class="o">-</span> <span class="mf">0.007</span> <span class="o">*</span> <span class="n">bz</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mf">0.024</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pdyn</span><span class="p">))</span>
+    <span class="n">rmp</span> <span class="o">=</span> <span class="n">r0</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)))</span> <span class="o">**</span> <span class="n">a1</span>
+    <span class="k">return</span> <span class="n">rmp</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, primesw Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

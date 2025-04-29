@@ -7,49 +7,25 @@ from sklearn.preprocessing import RobustScaler #RobustScaler is used to scale th
 import joblib
 from .prime import prime, crps_loss, mse_metric
 
-__all__ = ['primesh', 'jelinek_bs', 'shue_mp'] # Here __all__ is defined so that pdoc only documents these identifiers. Other functions are not worth documenting or should not be accessed.
+__all__ = ['primesh', 'jelinek_bs', 'shue_mp'] # Here __all__ is defined so that docs tools can read the appropriate docstrings
 
 class primesh(prime):
     '''
-        Class to wrap a keras model to be used with the Sheath-trained PRIME-SH architecture (for solar wind prediction see `primesw.prime`). It is recommended to instantiate `primesh` objects in their default configuration:
-        ```
-        import primesw as psw
-        propagator = psw.primesh()
-        ```
-        Users will most likely use this class primarily for its `primesh.predict` method. This method is inherited from `primesw.prime` and thus operates the same way.
-        To generate solar wind predictions from Wind spacecraft data, specify `start` and `stop` times for the desired prediction.
-        `start` and `stop` are strings with format 'YYYY-MM-DD HH:MM:SS'.
-        ```
-        import primesw as psw
-        propagator = psw.primesh()
-        propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
-        ```
-        If using data from an L1 monitor to make predictions, pass the input data using `input` argument.
-        If `input` is specified, `start` and `stop` should not be (and vice versa).
-        `input` is also useful for making predicitons from synthetic solar wind data (see inherited method `primesw.prime.build_synth_input`).
-        For instance, one can predict what the magnetosheath conditions at the magnetopause nose would be if the solar wind flow at L1 was 700km/s:
-        ```
-        import primesw as psw
-        propagator = psw.primesh()
-        propagator.predict(input = propagator.build_synth_input(vx=-700))
-        ```
-        By default, predictions are made at the average middle of Earth's magnetosheath 12.25 Earth Radii upstream on the Geocentric Solar Ecliptic (GSE) x-axis.
-        One can also specify a position to propagate to besides the default by specifying `pos`:
-        ```
-        import primesw as psw
-        propagator = psw.primesh()
-        propagator.predict(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00', pos = [11.25, 5, 0])
-        ```
-        All positions are in GSE coordinates with units of Earth Radii.
-        It is not recommended to make predictions outside of the region PRIME-SH was trained on (within 30 Earth radii of the Earth on the dayside).
+        This class wraps an instance of PRIME-SH for solar wind prediciton.
 
-        When instantiating a `primesh` object, one can specify a predefined `model` to be used instead of the automatically-loaded PRIME-SH model. 
-        In that case, the scaling functions for the input and target datasets (`in_scaler` and `tar_scaler`), the input and target features (`in_keys` and `tar_keys`), and the output features (`out_keys`) must be specified.
-        The full list of arguments that can be passed to `primesh` is given below.
+        When instantiating a ``primesh`` object, one can specify a predefined ``model`` to be used instead of the automatically-loaded PRIME-SH model. 
+        In that case, the scaling functions for the input and target datasets (``in_scaler`` and ``tar_scaler``), the input and target features (``in_keys`` and ``tar_keys``), and the output features (``out_keys``) must be specified.
+        The full list of arguments that can be passed to ``primesh`` is given below.
     '''
     def __init__(self, model = None, in_scaler = None, tar_scaler = None, loc_scaler = None, in_keys = None, tar_keys = None, out_keys = None, hps = [55, 18, 0.05]):
         '''
-        `hps` is an array of dataset-pertinent hyperparameters. The three elements correspond to `window`, `input`, and `stride`:
+        :param model: Keras model for predicitons. If None, PRIME-SH is loaded from the package. 
+        :param in_scaler: Scikitlearn preprocessing scaler for input arrays. If None, pre-fit RobustScaler is loaded from the package.
+        :param tar_scaler: Scikitlearn preprocessing scaler for output arrays. If None, pre-fit RobustScaler is loaded from the package.
+        :param tar_scaler: Scikitlearn preprocessing scaler for target location arrays. If None, pre-fit RobustScaler is loaded from the package.
+        :param in_keys: Features used as inputs. If None, defaults are loaded from the package.
+        :param tar_keys: Features used as targets. If None, defaults are loaded from the package.
+        :param out_keys: Features used as outputs. If None, defaults are loaded from the package.
         '''
         super(primesh, self).__init__()
         if in_scaler is None:
