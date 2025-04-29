@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "primesw"
-version = "0.4.0"
+version = "0.5.0"
 description = "Probabilistic Regressor for Input to the Magnetosphere Estimation (Solar Wind)"
 authors = ["Connor OBrien <obrienco@bu.edu>",]
 license = "GPL-3.0"
