@@ -1,22 +1,8 @@
 Usage
 =====
 
-.. _installation:
+PRIME and PRIME-SH are accessed using the ``prime`` and ``primesh`` classes. For more details see the below sections:
 
-Installation
-------------
-
-To use `primesw`, first install it using pip:
-
-.. code-block:: console
-
-   pip install primesw
-
-
-Or, get the latest version from source:
-
-.. code-block:: console
-
-   git clone https://github.com/connor-obrien888/prime
-   cd prime_lib
-   pip install .
+.. toctree::
+   sw
+   sh

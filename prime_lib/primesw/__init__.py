@@ -1,3 +1,7 @@
+'''
+Test string in __init__
+'''
+
 from .prime import prime
 from .primesh import primesh
 

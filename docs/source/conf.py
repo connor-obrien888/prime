@@ -11,7 +11,7 @@ import sys
 
 # Source code dir relative to this file;
 # used by predictor.rst's autosummary
-sys.path.insert(0, os.path.abspath(os.path.join('..', '..','prime_lib')))
+sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'prime_lib')))
 
 
 # -- Project information
@@ -30,9 +30,11 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.viewcode',  # Add a link to the Python source code for classes, functions etc.
 ]
 
 autosummary_generate = True # Turn on sphinx.ext.autosummary
+autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),

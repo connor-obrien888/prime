@@ -1,0 +1,310 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar Wind Prediction &mdash; primesw 0.4.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=4e78f113"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Magnetosheath Prediction" href="sh.html" />
+    <link rel="prev" title="Usage" href="usage.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            primesw
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="usage.html">Usage</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Solar Wind Prediction</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#primesw.prime"><code class="docutils literal notranslate"><span class="pre">prime</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.build_model"><code class="docutils literal notranslate"><span class="pre">prime.build_model()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.build_real_input"><code class="docutils literal notranslate"><span class="pre">prime.build_real_input()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.build_synth_input"><code class="docutils literal notranslate"><span class="pre">prime.build_synth_input()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.fraction"><code class="docutils literal notranslate"><span class="pre">prime.fraction</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.predict"><code class="docutils literal notranslate"><span class="pre">prime.predict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.predict_grid"><code class="docutils literal notranslate"><span class="pre">prime.predict_grid()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.predict_raw"><code class="docutils literal notranslate"><span class="pre">prime.predict_raw()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.stride"><code class="docutils literal notranslate"><span class="pre">prime.stride</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#primesw.prime.window"><code class="docutils literal notranslate"><span class="pre">prime.window</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="sh.html">Magnetosheath Prediction</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">primesw</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="usage.html">Usage</a></li>
+      <li class="breadcrumb-item active">Solar Wind Prediction</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/sw.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="solar-wind-prediction">
+<h1>Solar Wind Prediction<a class="headerlink" href="#solar-wind-prediction" title="Permalink to this heading"></a></h1>
+<p>To predict the solar wind, <code class="docutils literal notranslate"><span class="pre">primesw</span></code> includes the <code class="docutils literal notranslate"><span class="pre">prime</span></code> class.
+This class loads a pretrained implemetation of the PRIME algorithm, and includes several methods to help users make predictions on grids and/or with synthetic data.
+It is recommended to instantiate <code class="docutils literal notranslate"><span class="pre">prime</span></code> objects in their default configuration:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">primesw</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psw</span>
+<span class="n">propagator</span> <span class="o">=</span> <span class="n">psw</span><span class="o">.</span><span class="n">prime</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">prime</span></code> class method <code class="docutils literal notranslate"><span class="pre">prime.predict()</span></code> is the way that most users will interface with PRIME.
+To generate solar wind predictions from Wind spacecraft data, specify <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code> times for the desired prediction.
+<code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code> are strings with format <code class="docutils literal notranslate"><span class="pre">'YYYY-MM-DD</span> <span class="pre">HH:MM:SS'</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">primesw</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psw</span>
+<span class="n">propagator</span> <span class="o">=</span> <span class="n">psw</span><span class="o">.</span><span class="n">prime</span><span class="p">()</span>
+<span class="n">propagator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="s1">&#39;2020-01-01 00:00:00&#39;</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="s1">&#39;2020-01-02 00:00:00&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If using data from an L1 monitor to make predictions, pass the input data using <code class="docutils literal notranslate"><span class="pre">input</span></code> argument.
+If <code class="docutils literal notranslate"><span class="pre">input</span></code> is specified, <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code> should not be (and vice versa).
+<code class="docutils literal notranslate"><span class="pre">input</span></code> is also useful for making predicitons from synthetic solar wind data (see <code class="docutils literal notranslate"><span class="pre">prime.build_synth_input</span></code>).
+For instance, one can predict what the solar wind at the bow shock nose would be if the solar wind flow at L1 was 700km/s:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">primesw</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psw</span>
+<span class="n">propagator</span> <span class="o">=</span> <span class="n">psw</span><span class="o">.</span><span class="n">prime</span><span class="p">()</span>
+<span class="n">propagator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="nb">input</span> <span class="o">=</span> <span class="n">propagator</span><span class="o">.</span><span class="n">build_synth_input</span><span class="p">(</span><span class="n">vx</span><span class="o">=-</span><span class="mi">700</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>By default, predictions are made at the average location of the nose of Earth’s bow shock 13.25 Earth Radii upstream on the Geocentric Solar Ecliptic (GSE) x-axis.
+One can also specify a position to propagate to besides the default by specifying <code class="docutils literal notranslate"><span class="pre">pos</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">primesw</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psw</span>
+<span class="n">propagator</span> <span class="o">=</span> <span class="n">psw</span><span class="o">.</span><span class="n">prime</span><span class="p">()</span>
+<span class="n">propagator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="s1">&#39;2020-01-01 00:00:00&#39;</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="s1">&#39;2020-01-02 00:00:00&#39;</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span><span class="mf">13.25</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>All positions are in GSE coordinates with units of Earth Radii.
+It is not recommended to make predictions outside of the region PRIME was trained on (within 30 Earth radii of the Earth on the dayside).</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="primesw.prime">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">primesw.</span></span><span class="sig-name descname"><span class="pre">prime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_scaler</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tar_scaler</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_keys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tar_keys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_keys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[60,</span> <span class="pre">15,</span> <span class="pre">0.08333333333333333]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/primesw/prime.html#prime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#primesw.prime" title="Permalink to this definition"></a></dt>
+<dd><p>This class wraps an instance of PRIME for solar wind prediciton.</p>
+<p>When instantiating a <code class="docutils literal notranslate"><span class="pre">prime</span></code> object, one can specify a predefined <code class="docutils literal notranslate"><span class="pre">model</span></code> to be used instead of the automatically-loaded PRIME model.
+In that case, the scaling functions for the input and target datasets (<code class="docutils literal notranslate"><span class="pre">in_scaler</span></code> and <code class="docutils literal notranslate"><span class="pre">tar_scaler</span></code>), the input and target features (<code class="docutils literal notranslate"><span class="pre">in_keys</span></code> and <code class="docutils literal notranslate"><span class="pre">tar_keys</span></code>), and the output features (<code class="docutils literal notranslate"><span class="pre">out_keys</span></code>) must be specified.
+The full list of arguments that can be passed to <code class="docutils literal notranslate"><span class="pre">prime</span></code> is given below, but they are not recommended for general use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> – Keras model for predicitons. If None, PRIME is loaded from the package.</p></li>
+<li><p><strong>in_scaler</strong> – Scikitlearn preprocessing scaler for input arrays. If None, pre-fit RobustScaler is loaded from the package.</p></li>
+<li><p><strong>tar_scaler</strong> – Scikitlearn preprocessing scaler for output arrays. If None, pre-fit RobustScaler is loaded from the package.</p></li>
+<li><p><strong>in_keys</strong> – Features used as inputs. If None, defaults are loaded from the package.</p></li>
+<li><p><strong>tar_keys</strong> – Features used as targets. If None, defaults are loaded from the package.</p></li>
+<li><p><strong>out_keys</strong> – Features used as outputs. If None, defaults are loaded from the package.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="primesw.prime.build_model">
+<span class="sig-name descname"><span class="pre">build_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[352,</span> <span class="pre">192,</span> <span class="pre">48,</span> <span class="pre">48]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'elu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/primesw/prime.html#prime.build_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#primesw.prime.build_model" title="Permalink to this definition"></a></dt>
+<dd><p>Builds the underlying PRIME model with no weights or biases loaded. Deprecated as of keras introducing the <cite>.keras</cite> model save routine.
+Units are the layer size of the GRU layer and three dense layers.
+Normalization and dropout applied at each layer.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="primesw.prime.build_real_input">
+<span class="sig-name descname"><span class="pre">build_real_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[13.25,</span> <span class="pre">0,</span> <span class="pre">0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">load_freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'3M'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/primesw/prime.html#prime.build_real_input"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#primesw.prime.build_real_input" title="Permalink to this definition"></a></dt>
+<dd><p>Load Wind spacecraft input data for PRIME in between specified date strings.</p>
+<section id="parameters">
+<h2>Parameters:<a class="headerlink" href="#parameters" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>start (string): The start date of the data to load (‘YYYY-MM-DD’)</p></li>
+<li><p>end (string): The end date of the data to load (‘YYYY-MM-DD’)</p></li>
+<li><p>pos (list): Location of propagation in GSE coordinates (Earth Radii). Default [13.25, 0, 0].</p></li>
+<li><p>load_freq (string): Max length of data loaded by CdasWs. If throwing RuntimeError, try modifying this parameter. Default ‘3M’ (three months).</p></li>
+</ul>
+</section>
+<section id="return">
+<h2>Return:<a class="headerlink" href="#return" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>input (Dataframe): Input dataframe suitable to predict from with self.predict().</p></li>
+</ul>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="primesw.prime.build_synth_input">
+<span class="sig-name descname"><span class="pre">build_synth_input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Timestamp('1970-01-01</span> <span class="pre">00:00:00+0000',</span> <span class="pre">tz='UTC')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-400</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ni</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tar_rx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">13.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tar_ry</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tar_rz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/primesw/prime.html#prime.build_synth_input"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#primesw.prime.build_synth_input" title="Permalink to this definition"></a></dt>
+<dd><p>Builds a synthetic input array from user-specified quantities at L1.
+For input arrays made from measured data at L1, see <cite>prime.build_real_input</cite>.</p>
+<section id="id1">
+<h2>Parameters:<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>epoch (datetime): Datetime of start of input Dataframe.</p></li>
+<li><p>bx (float, array-like): IMF Bx value (nT).</p></li>
+<li><p>by (float, array-like): IMF By value (nT).</p></li>
+<li><p>bz (float, array-like): IMF Bz value (nT).</p></li>
+<li><p>vx (float, array-like): Solar wind Vx value ().</p></li>
+<li><p>vy (float, array-like): Solar wind Vy value.</p></li>
+<li><p>vz (float, array-like): Solar wind Vz value.</p></li>
+<li><p>ni (float, array-like): Solar wind ion density value.</p></li>
+<li><p>vt (float, array-like): Solar wind ion thermal speed value.</p></li>
+<li><p>rx (float, array-like): Wind spacecraft position x value.</p></li>
+<li><p>ry (float, array-like): Wind spacecraft position y value.</p></li>
+<li><p>rz (float, array-like): Wind spacecraft position z value.</p></li>
+<li><p>tar_rx (float, array-like): Propagation target position x value.</p></li>
+<li><p>tar_ry (float, array-like): Propagation target position y value.</p></li>
+<li><p>tar_rz (float, array-like): Propagation target position z value.</p></li>
+</ul>
+</section>
+<section id="returns">
+<h2>Returns:<a class="headerlink" href="#returns" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>input (Dataframe): Input dataframe suitable to predict from with self.predict().</p></li>
+</ul>
+</section>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="primesw.prime.fraction">
+<span class="sig-name descname"><span class="pre">fraction</span></span><a class="headerlink" href="#primesw.prime.fraction" title="Permalink to this definition"></a></dt>
+<dd><p>Maximum fraction of input timeseries that can be interpolated, in 100s units. Specified via <cite>hps</cite> argument.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="primesw.prime.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stop</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[13.25,</span> <span class="pre">0,</span> <span class="pre">0]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/primesw/prime.html#prime.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#primesw.prime.predict" title="Permalink to this definition"></a></dt>
+<dd><p>Method that produces a dataframe of PRIME solar wind predictions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="primesw.prime.predict_grid">
+<span class="sig-name descname"><span class="pre">predict_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gridsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_extent</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">framenum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ni</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_extent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_extent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtract_ecliptic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/primesw/prime.html#prime.predict_grid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#primesw.prime.predict_grid" title="Permalink to this definition"></a></dt>
+<dd><p>Generate predictions from PRIME on a grid of points in GSE coordinates.</p>
+<section id="id2">
+<h2>Parameters:<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>gridsize (float): Spacing of grid points (RE)</p></li>
+<li><p>x_extent (list): Range of x values to calculate on (GSE RE).</p></li>
+<li><p>framenum (int): Number of frames to calculate (GSE RE).</p></li>
+<li><p>bx (float, array-like): IMF Bx value (nT). If array like, must be of length framenum.</p></li>
+<li><p>by (float, array-like): IMF By value (nT). If array like, must be of length framenum.</p></li>
+<li><p>bz (float, array-like): IMF Bz value (nT). If array like, must be of length framenum.</p></li>
+<li><p>vx (float, array-like): Solar wind Vx value (km/s). If array like, must be of length framenum.</p></li>
+<li><p>vy (float, array-like): Solar wind Vy value (km/s). If array like, must be of length framenum.</p></li>
+<li><p>vz (float, array-like): Solar wind Vz value (km/s). If array like, must be of length framenum.</p></li>
+<li><p>ni (float, array-like): Solar wind ion density value (cm^-3). If array like, must be of length framenum.</p></li>
+<li><p>vt (float, array-like): Solar wind ion thermal speed value (km/s). If array like, must be of length framenum.</p></li>
+<li><p>rx (float, array-like): Wind spacecraft position x value (GSE RE). If array like, must be of length framenum.</p></li>
+<li><p>ry (float, array-like): Wind spacecraft position y value (GSE RE). If array like, must be of length framenum.</p></li>
+<li><p>rz (float, array-like): Wind spacecraft position z value (GSE RE). If array like, must be of length framenum.</p></li>
+<li><p>y_extent (list): Range of y values to calculate on (GSE RE). If None, z_extent must be specified.</p></li>
+<li><p>z_extent (list): Range of z values to calculate on (GSE RE). If None, y_extent must be specified.</p></li>
+<li><p>y (float, array-like): Y position (GSE RE) that is held constant if y_extent is not specified. Default 0.</p></li>
+<li><p>z (float, array-like): Z position (GSE RE) that is held constant if z_extent is not specified. Default 0.</p></li>
+<li><p>subtract_ecliptic (bool): Whether or not to subtract the Earth’s motion in the ecliptic from Vy. Default False.</p></li>
+</ul>
+</section>
+<section id="id3">
+<h2>Returns:<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>output_grid (ndarray): Array of predicted values on the grid. Shape (framenum, x_extent/gridsize, y_extent/gridsize, 14). Features as in <cite>prime.out_keys</cite>.</p></li>
+</ul>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="primesw.prime.predict_raw">
+<span class="sig-name descname"><span class="pre">predict_raw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/primesw/prime.html#prime.predict_raw"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#primesw.prime.predict_raw" title="Permalink to this definition"></a></dt>
+<dd><p>Generates PRIME predictions from input dataframe. Assumes that <cite>input</cite> has keys specified by <cite>prime.in_keys</cite>. It is generally recommended to use <cite>prime.predict</cite> instead.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="primesw.prime.stride">
+<span class="sig-name descname"><span class="pre">stride</span></span><a class="headerlink" href="#primesw.prime.stride" title="Permalink to this definition"></a></dt>
+<dd><p>Prediction lead time, in 100s units. Specified via <cite>hps</cite> argument.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="primesw.prime.window">
+<span class="sig-name descname"><span class="pre">window</span></span><a class="headerlink" href="#primesw.prime.window" title="Permalink to this definition"></a></dt>
+<dd><p>Length of input timeseries, in 100s units. Specified via <cite>hps</cite> argument.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="usage.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sh.html" class="btn btn-neutral float-right" title="Magnetosheath Prediction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, primesw Developers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
