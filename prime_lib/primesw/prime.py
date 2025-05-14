@@ -13,6 +13,29 @@ import joblib
 
 __all__ = ['prime', 'crps_loss', 'mse_metric'] # Here __all__ is defined so that docs tools can read the appropriate docstrings
 
+def load_data(start, stop, region = 'sw', url = 'https://github.com/connor-obrien888/prime/blob/main/cdf/', cut_time = True):
+    from spacepy import pycdf
+    dates = pd.date_range(start, stop, freq='1D') #Dates for each one-day cadence file
+    data = pd.DataFrame([]) #Stage a dataframe to return with data in it
+    for date in dates:
+        data_stage = pd.DataFrame([]) #Staging object for date's data
+        if region == 'sw': #Point to solar wind CDFs
+            file_url = url + 'prime/'+date.strftime('%Y/%m/')
+            filename = date.strftime('prime_bsn_%Y%m%d.cdf')
+        elif region == 'sh': #Point to magnetosheath CDFs
+            file_url = url + 'primesh/'+date.strftime('%Y/%m/')
+            filename = date.strftime('primesh_mp_%Y%m%d.cdf')
+        else:
+            raise TypeError('Region must be either string sw or sh.')
+        with pycdf.CDF(file_url + filename) as cdf: #Open the CDF on remote
+            for key in cdf.keys(): #Pull data from all the keys into dataframe
+                data_stage[key] = cdf[key]
+        data = pd.concat([data,data_stage], ignore_index = True)
+        if cut_time: #Cut data to just the specified start and stop interval
+            data = data.loc[(data['Epoch']>pd.to_datetime(start, utc = True))
+                            & (data['Epoch']<pd.to_datetime(stop, utc = True)), :].reset_index(drop=True)
+    return data
+
 class prime:
     '''
         This class wraps an instance of PRIME for solar wind prediciton.
@@ -309,14 +332,14 @@ class prime:
         cdas = CdasWs() #Initialize CDAS WS Session
         mfi_df = pd.DataFrame([]) #Staging dataframe for Wind spacecraft Magnetic Field Investigation data
         try:
-            data = cdas.get_data('WI_K0_MFI', ['BGSMc', 'PGSE'], start, stop) #Load GSM B field and GSE SC position
+            data = cdas.get_data('WI_H0_MFI', ['BGSM', 'PGSE'], start, stop) #Load GSM B field and GSE SC position
             mfi_df['Epoch'] = data[1]['Epoch'] #MFI timestamps
             mfi_df['R_xgse'] = data[1]['PGSE'][:, 0] #Wind SC position
             mfi_df['R_ygse'] = data[1]['PGSE'][:, 1]
             mfi_df['R_zgse'] = data[1]['PGSE'][:, 2]
-            mfi_df['B_xgsm'] = data[1]['BGSMc'][:, 0] #GSM B field
-            mfi_df['B_ygsm'] = data[1]['BGSMc'][:, 1]
-            mfi_df['B_zgsm'] = data[1]['BGSMc'][:, 2]
+            mfi_df['B_xgsm'] = data[1]['BGSM'][:, 0] #GSM B field
+            mfi_df['B_ygsm'] = data[1]['BGSM'][:, 1]
+            mfi_df['B_zgsm'] = data[1]['BGSM'][:, 2]
         except TypeError: #Throws when date range is empty OR too big
             raise RuntimeError('CDASWS failed to load MFI data. Date range ('+start+' to '+stop+') may be too large or data may be missing.')
         mfi_df['Epoch'] = pd.to_datetime(mfi_df['Epoch'], utc=True) #Convert to UTC aware datetime
