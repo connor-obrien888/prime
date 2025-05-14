@@ -531,6 +531,8 @@ def index_shifter(in_df, shift, keys):
 def fillutil(cdf_struct, varname, attdict, data):
     '''
     Function that fills a CDF variable with data and metadata.
+
+    DEPRECATED IN FAVOR OF fillutil() IN ../cdf/cdf_writer.py
     '''
     cdf_struct[varname] = data
     cdf_struct[varname].attrs = attdict
@@ -547,6 +549,8 @@ def fillutil(cdf_struct, varname, attdict, data):
 def labelutil(cdf_struct, varname, attdict, labels):
     '''
     Function that fills a CDF variable with labels and metadata.
+
+    DEPRECATED IN FAVOR OF labelutil() IN ../cdf/cdf_writer.py
     '''
     cdf_struct[varname] = labels
     cdf_struct[varname].attrs = attdict
@@ -554,6 +558,8 @@ def labelutil(cdf_struct, varname, attdict, labels):
 def cdfw(data,filename):
     """
     Function that takes dataframe of PRIME outputs and saves as CDF with correct metadata.
+
+    DEPRECATED IN FAVOR OF cdfw() IN ../cdf/cdf_writer.py
 
     ### Parameters
     
