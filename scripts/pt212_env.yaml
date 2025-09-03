@@ -1,0 +1,17 @@
+name: pt212gpu_conda
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.11.*
+  - libblas=*=*mkl
+  - "numpy<2"
+  - scipy
+  - pandas
+  - hdf5=*=*openmpi*
+  - h5py=*=*openmpi*
+  - pytorch=2.1.2
+  - torchvision=0.16.2
+  - torchaudio=2.1.2
+  - pytorch-cuda=12.1
