@@ -15,6 +15,8 @@ class SWDataset(Dataset):
         window = None,
         stride = None,
         interp_frac = None,
+        input_normalizations = None,
+        target_normalizations = None,
         min_time = None,
         max_time = None,
         raw_data = None,
@@ -64,9 +66,31 @@ class SWDataset(Dataset):
             :
         ] #Cut time of base data to be between min and max times
 
-        #TODO: make normed tensor data of targets and inputs
-        self.input_data = torch.tensor(self.raw_data.loc[:, input_features].values) #PLACEHOLDER
-        self.target_data = torch.tensor(self.raw_data.loc[:,target_features].values) #PLACEHOLDER
+        #Normalize the input and target data
+        if input_normalizations is not None: #Should we do input normalization?
+            self.input_normalizations = input_normalizations
+            input_scaled = self.raw_data.loc[:, input_features]
+            for feature in input_features:
+                input_scaled[feature] = (input_scaled[feature] - self.input_normalizations[feature][0])/self.input_normalizations[feature][1]
+        else:
+            input_scaled = self.raw_data.loc[:, input_features]
+        if target_normalizations is not None: #Should we do target normalization?
+            self.target_normalizations = target_normalizations
+            target_scaled = self.raw_data.loc[:, target_features]
+            for feature in target_features:
+                target_scaled[feature] = (target_scaled[feature] - self.target_normalizations[feature][0])/self.target_normalizations[feature][1]
+        else:
+            target_scaled = self.raw_data.loc[:, target_features]
+        
+        #Split the input data into windows and get the right targets
+        input_arr = np.zeros((len(input_scaled)-(self.window+self.stride-1), self.window, len(self.input_features)))
+        target_arr = np.zeros((len(input_scaled)-(self.window+self.stride-1), len(self.input_features)))
+        for i in np.arange(len(input_scaled)-(self.window+self.stride-1)):
+            input_arr[i,:,:] = input_scaled.iloc[i:(i+self.window), :].values # Move the window through the input data
+            target_arr[i,:] = target_scaled.iloc[(i+self.window+self.stride), :].values # Get the target stride away from the last entry in the timeseries
+        self.input_data = torch.tensor(input_arr) # Turn numpy arrays into tensors
+        self.target_data = torch.tensor(target_arr)
+        self.target_timestamps = self.raw_data.iloc[self.window+self.stride:].loc[:,'time'] # Store the times of each target for QA
 
     def __len__(self): # A torch dataset must have a __len__ method
         return self.raw_data.shape[0]
@@ -160,6 +184,8 @@ class SWDataModule(pl.LightningDataModule):
             window = self.window,
             stride = self.stride,
             interp_frac = self.interp_frac,
+            input_normalizations = self.input_normalizations,
+            target_normalizations = self.target_normalizations,
             min_time = self.trn_bounds[0],
             max_time = self.trn_bounds[1],
             raw_data = self.raw_data,
@@ -174,6 +200,8 @@ class SWDataModule(pl.LightningDataModule):
             window = self.window,
             stride = self.stride,
             interp_frac = self.interp_frac,
+            input_normalizations = self.input_normalizations,
+            target_normalizations = self.target_normalizations,
             min_time = self.val_bounds[0],
             max_time = self.val_bounds[1],
             raw_data = self.raw_data,
@@ -188,6 +216,8 @@ class SWDataModule(pl.LightningDataModule):
             window = self.window,
             stride = self.stride,
             interp_frac = self.interp_frac,
+            input_normalizations = self.input_normalizations,
+            target_normalizations = self.target_normalizations,
             min_time = self.tst_bounds[0],
             max_time = self.tst_bounds[1],
             raw_data = self.raw_data,
