@@ -12,7 +12,7 @@ class SWDataset(Dataset):
         target_features,
         input_features,
         position_features,
-        freq,
+        cadence,
         window = None,
         stride = None,
         interp_frac = None,
@@ -30,7 +30,7 @@ class SWDataset(Dataset):
         self.target_features = target_features # Features model uses as targets
         self.input_features = input_features # Features model uses as input
         self.position_features = position_features # Position of the target for encoder
-        self.freq = freq # Cadence of data
+        self.cadence = cadence # Cadence of data
         self.input_normalizations = input_normalizations
         self.target_normalizations = target_normalizations
         self.position_normalizations = position_normalizations
@@ -68,8 +68,7 @@ class SWDataset(Dataset):
             logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in raw_data")
         self.raw_data = self.raw_data.loc[
             (self.raw_data['time'] <= max_time)&
-            (self.raw_data['time'] >= min_time),
-            :
+            (self.raw_data['time'] >= min_time), :
         ] #Cut time of base data to be between min and max times
 
         #Normalize the target, input, and position data
@@ -104,13 +103,14 @@ class SWDataset(Dataset):
         self.input_data = torch.tensor(input_arr) # Turn numpy arrays into tensors
         self.target_data = torch.tensor(target_arr)
         self.position_data = torch.tensor(position_arr)
-        self.target_timestamps = self.raw_data.iloc[self.window+self.stride:].loc[:,'time'] # Store the times of each target for QA
+        self.target_timestamps = [time.strftime('%Y%m%d %H:%M:%S+0000') for time in self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time']]
+        # self.target_timestamps = self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time'].to_numpy() # Store the times of each target for QA
 
     def __len__(self): # A torch dataset must have a __len__ method
-        return self.raw_data.shape[0]
+        return self.input_data.shape[0]
     
     def __getitem__(self, idx): # A torch dataset must have a __getitem__ method
-        return self.input_data[idx], self.position_data[idx], self.target_data[idx]
+        return self.input_data[idx], self.position_data[idx], self.target_data[idx], self.target_timestamps[idx]
 
     def __str__(self): # A torch dataset MIGHT need a __str__ method
         output = ""
@@ -124,7 +124,7 @@ class SWDataModule(pl.LightningDataModule):
         target_features,
         input_features,
         position_features,
-        freq,
+        cadence,
         window = None,
         stride = None,
         interp_frac = None,
@@ -136,10 +136,11 @@ class SWDataModule(pl.LightningDataModule):
         datastore = "~/data/prime/sw_data.h5",
         key = "mms_wind_combined",
     ):
+        super().__init__()
         self.target_features = target_features # Features model uses as targets
         self.input_features = input_features # Features model uses as input
         self.position_features = position_features # Positions of the targets added to the inputs
-        self.freq = freq # Cadence of data
+        self.cadence = cadence # Cadence of data
         self.batch_size = batch_size # Training batch size
         self.num_workers = num_workers # Number of workers for loading data
 
@@ -178,21 +179,30 @@ class SWDataModule(pl.LightningDataModule):
         
         # Bounds of train/test/validation sets
         if trn_bounds is not None:
-            self.trn_bounds = trn_bounds
+            self.trn_bounds = [
+                pd.to_datetime(trn_bounds[0]),
+                pd.to_datetime(trn_bounds[1])
+            ]
         else:
             self.trn_bounds = [
                 pd.to_datetime('20150902 00:00:00+0000'), # First 60% of MMS dataset by default
                 pd.to_datetime('20210411 00:00:00+0000')
             ]
         if val_bounds is not None:
-            self.val_bounds = val_bounds
+            self.val_bounds = [
+                pd.to_datetime(val_bounds[0]),
+                pd.to_datetime(val_bounds[1])
+            ]
         else:
             self.val_bounds = [
                 pd.to_datetime('20210411 00:00:00+0000'), # next 20% of MMS dataset by default
                 pd.to_datetime('20230222 00:00:00+0000')
             ]
         if tst_bounds is not None:
-            self.tst_bounds = tst_bounds
+            self.tst_bounds = [
+                pd.to_datetime(tst_bounds[0]),
+                pd.to_datetime(tst_bounds[1])
+            ]
         else:
             self.tst_bounds = [
                 pd.to_datetime('20230222 00:00:00+0000'), # last 20% of MMS dataset by default
@@ -204,7 +214,7 @@ class SWDataModule(pl.LightningDataModule):
             self.target_features,
             self.input_features,
             self.position_features,
-            self.freq,
+            self.cadence,
             window = self.window,
             stride = self.stride,
             interp_frac = self.interp_frac,
@@ -222,7 +232,7 @@ class SWDataModule(pl.LightningDataModule):
             self.target_features,
             self.input_features,
             self.position_features,
-            self.freq,
+            self.cadence,
             window = self.window,
             stride = self.stride,
             interp_frac = self.interp_frac,
@@ -240,7 +250,7 @@ class SWDataModule(pl.LightningDataModule):
             self.target_features,
             self.input_features,
             self.position_features,
-            self.freq,
+            self.cadence,
             window = self.window,
             stride = self.stride,
             interp_frac = self.interp_frac,
@@ -267,7 +277,6 @@ class SWDataModule(pl.LightningDataModule):
             self.val_ds,
             batch_size = self.batch_size,
             num_workers = self.num_workers,
-            shuffle = True,
         )
 
     def test_dataloader(self): # A torch datamodule must have a test_dataloader method

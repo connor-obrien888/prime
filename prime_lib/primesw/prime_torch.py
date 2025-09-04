@@ -8,7 +8,7 @@ from loguru  import logger
 
 from models import LinearDecoder, RecurrentEncoder
     
-class SWRegressor(pl.LigtningModule):
+class SWRegressor(pl.LightningModule):
     def __init__(
             self,
             optimizer = "adam",
@@ -30,7 +30,7 @@ class SWRegressor(pl.LigtningModule):
             *args,
             **kwargs,
     ):
-        super().__init(*args, **kwargs) # Pass bonus arguments to the LightningModule
+        super().__init__(*args, **kwargs) # Pass bonus arguments to the LightningModule
         self.save_hyperparameters() #inherited method from LightningModule
 
         # Optimiser Parameters
@@ -73,8 +73,19 @@ class SWRegressor(pl.LigtningModule):
         match self.decoder_type:
             case "linear":
                 self.decoder = LinearDecoder(
-                    in_dim = self.encoder_hidden_dim,
+                    in_dim = self.encoder_hidden_dim * self.encoder_num_layers,
                     tar_dim = self.tar_dim,
+                    pos_dim = self.pos_dim,
+                    pos_encoding_size = self.pos_encoding_size,
+                    hidden_layers = self.decoder_hidden_layers,
+                    p_drop = self.p_drop,
+                )
+            case "prob_linear": 
+                # This is a special case of linear that outputs two values for each target feature.
+                # NOTE: Compatible with loss = 'crps' ONLY!
+                self.decoder = LinearDecoder(
+                    in_dim = self.encoder_hidden_dim * self.encoder_num_layers,
+                    tar_dim = self.tar_dim * 2,
                     pos_dim = self.pos_dim,
                     pos_encoding_size = self.pos_encoding_size,
                     hidden_layers = self.decoder_hidden_layers,
@@ -90,16 +101,21 @@ class SWRegressor(pl.LigtningModule):
                     outputs,
                     targets,
                 )
+            case "crps":
+                self.loss_fn = lambda outputs, targets: crps(
+                    outputs,
+                    targets,
+                )
             case _:
                 raise ValueError(f"Invalid loss type {self.loss}")
     
     def forward(self, x, position):
-        h = self.encoder.forward(x)
+        out, h = self.encoder.forward(x)
         y_hat = self.decoder.forward(h, position)
         return y_hat
     
     def predict_step(self, batch, batch_idx):
-        timeseries, position, target = batch
+        timeseries, position, target, times = batch
         with torch.no_grad():
             y_hat = self(timeseries, position)
             h = self.encoder.forward(timeseries)
@@ -109,10 +125,11 @@ class SWRegressor(pl.LigtningModule):
             'encodings': h,
             'predictions': y_hat,
             'targets': target,
+            'timestamps': times,
         }
 
     def training_step(self, batch, batch_idx):
-        timeseries, position, target = batch
+        timeseries, position, target, _ = batch
         y_hat = self(timeseries, position)
         # Calculate loss
         loss = self.loss_fn(y_hat, target)
@@ -135,7 +152,7 @@ class SWRegressor(pl.LigtningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
-        timeseries, position, target = batch
+        timeseries, position, target, _ = batch
         y_hat = self(timeseries, position)
         # Calculate loss
         val_loss = self.loss_fn(y_hat, target)
@@ -145,7 +162,7 @@ class SWRegressor(pl.LigtningModule):
         return val_loss
 
     def test_step(self, batch, batch_idx):
-        timeseries, position, target = batch
+        timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
         # Calculate loss
         test_loss = self.loss_fn(y_hat, target)
@@ -156,6 +173,7 @@ class SWRegressor(pl.LigtningModule):
             "predictions": y_hat,
             "targets": target,
             "test_loss": test_loss,
+            "timestamps": times,
         }
     
     def on_validation_epoch_end(self):
@@ -254,7 +272,13 @@ class SWRegressor(pl.LigtningModule):
         else:
             return optimizer
 
-# def crps(outputs, targets):
-
-
-#     return loss
+def crps(outputs, targets):
+    if ((outputs.size(-1)%2)!=0):
+        raise ValueError(f"CRPS loss function requires even number of outputs from model.")
+    if outputs.dim() < 2: #If passed 1D outputs/targets
+        outputs = outputs.view(1, outputs.shape(0))
+    if targets.dim() < 2:
+        targets = targets.view(1, targets.shape(0))
+    ep = torch.abs(targets - outputs[:, ::2])
+    loss = outputs[:, 1::2] * ((ep/outputs[:, 1::2]) * torch.erf((ep/(np.sqrt(2)*outputs[:, 1::2]))) + np.sqrt(2/np.pi) * torch.exp(-ep**2 / (2*outputs[:, 1::2]**2)) - 1/np.sqrt(np.pi))
+    return loss

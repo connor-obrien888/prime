@@ -51,13 +51,13 @@ class LinearDecoder(nn.Module):
                     torch.nn.init.zeros_(m.bias)
 
     def forward(self, x, position):
-        batch_size = x.size(0)
+        batch_size = x.size(1) # Recurrent-like networks in torch return tensors of shape (layer, batch, encoding_dim)
         # Flatten input while preserving batch dimension
         if x.dim() > 2:
             x = x.view(batch_size, -1)
         pos_encoded = rff(
             position,
-            max_encoding=self.max_position_element
+            max_encoding=self.pos_encoding_size
         )
         pos_encoded = pos_encoded.detach().clone().to(dtype=x.dtype, device=x.device)
 
