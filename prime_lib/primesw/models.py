@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from loguru import logger
 
-class LinearEncoder(nn.Module):
+class LinearDecoder(nn.Module):
     def __init__(
             self,
             in_dim,

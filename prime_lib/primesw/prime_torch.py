@@ -1,11 +1,12 @@
 import torch
 from torch.utils.data import Dataset
 import lightning.pytorch as pl
+import gc
 import numpy as np
 import pandas as pd
 from loguru  import logger
 
-from models import LinearEncoder
+from models import LinearDecoder, RecurrentEncoder
     
 class SWRegressor(pl.LigtningModule):
     def __init__(
@@ -14,9 +15,11 @@ class SWRegressor(pl.LigtningModule):
             lr = 1e-3,
             lr_scheduler = None,
             weight_decay = 0,
-            recurrent_type = 'gru',
+            in_dim = 14,
+            tar_dim = 1,
+            pos_dim = 3,
             decoder_type = 'linear',
-            encoder_type = 'gru',
+            encoder_type = 'rnn',
             decoder_hidden_layers = [128],
             encoder_hidden_dim = 128,
             encoder_num_layers = 1,
@@ -36,10 +39,155 @@ class SWRegressor(pl.LigtningModule):
         self.weight_decay = weight_decay
         self.lr_scheduler = lr_scheduler
 
+        # Model Parameters
+        self.in_dim = in_dim
+        self.tar_dim = tar_dim
+        self.pos_dim = pos_dim
+        self.encoder_type = encoder_type
+        self.decoder_type = decoder_type
+        self.decoder_hidden_layers = decoder_hidden_layers
+        self.encoder_hidden_dim = encoder_hidden_dim
+        self.encoder_num_layers = encoder_num_layers
+        self.p_drop = p_drop
+        self.pos_encoding_size = pos_encoding_size
 
+        # Loss parameters
+        # self.trn_mae = 
+        # self.tst_mae = 
+        # self.val_mae = 
+        self.loss = loss
+
+        # Initialize the encoder
+        match self.encoder_type:
+            case "rnn":
+                self.encoder = RecurrentEncoder(
+                    in_dim = self.in_dim,
+                    encoding_size = self.encoder_hidden_dim,
+                    num_layers = self.encoder_num_layers,
+                    p_drop = self.p_drop,
+                )
+            case _:
+                raise ValueError(f"Invalid encoder type {self.encoder_type}")
         
+        # Initialize the decoder
+        match self.decoder_type:
+            case "linear":
+                self.decoder = LinearDecoder(
+                    in_dim = self.encoder_hidden_dim,
+                    tar_dim = self.tar_dim,
+                    pos_dim = self.pos_dim,
+                    pos_encoding_size = self.pos_encoding_size,
+                    hidden_layers = self.decoder_hidden_layers,
+                    p_drop = self.p_drop,
+                )
+            case _:
+                raise ValueError(f"Invalid decoder type {self.decoder_type}")
+        
+        # Handle the loss type
+        match self.loss:
+            case "mae":
+                self.loss_fn = lambda outputs, targets: torch.nn.functional.L1Loss(
+                    outputs,
+                    targets,
+                )
+            case _:
+                raise ValueError(f"Invalid loss type {self.loss}")
+    
+    def forward(self, x, position):
+        h = self.encoder.forward(x)
+        y_hat = self.decoder.forward(h, position)
+        return y_hat
+    
+    def predict_step(self, batch, batch_idx):
+        timeseries, position, target = batch
+        with torch.no_grad():
+            y_hat = self(timeseries, position)
+            h = self.encoder.forward(timeseries)
+        return {
+            'inputs': timeseries,
+            'positions': position,
+            'encodings': h,
+            'predictions': y_hat,
+            'targets': target,
+        }
 
+    def training_step(self, batch, batch_idx):
+        timeseries, position, target = batch
+        y_hat = self(timeseries, position)
+        # Calculate loss
+        loss = self.loss_fn(y_hat, target)
 
+        # TODO: Figure out logging (probably tensorboard)
+        # self.log(
+        #     'train_loss',
+        #     loss,
+        #     on_step=True,     # Log every step
+        #     on_epoch=True,    # Log at end of epoch
+        #     prog_bar=True,    # Show in progress bar
+        #     logger=True,
+        #     sync_dist=True
+        # )
+        # Log current learning rate from optimizer
+        # lr = self.trainer.optimizers[0].param_groups[0]['lr']
+        # self.log('lr', lr, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
+        # self.log('train_f1', self.train_f1, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        # self.log('train_acc', self.train_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        timeseries, position, target = batch
+        y_hat = self(timeseries, position)
+        # Calculate loss
+        val_loss = self.loss_fn(y_hat, target)
+
+        # TODO: Figure out logging (probably tensorboard)
+        
+        return val_loss
+
+    def test_step(self, batch, batch_idx):
+        timeseries, position, target = batch
+        y_hat = self(timeseries, position)
+        # Calculate loss
+        test_loss = self.loss_fn(y_hat, target)
+
+        # TODO: Figure out logging (probably tensorboard)
+        
+        return {
+            "predictions": y_hat,
+            "targets": target,
+            "test_loss": test_loss,
+        }
+    
+    def on_validation_epoch_end(self):
+        # TODO: Compute and log all accumulated metrics
+
+        # TODO: Figure out logging (probably tensorboard)
+
+        # TODO: Clear all the metrics
+        # for metric in [self.val_f1,
+        #                self.val_precision,
+        #                self.val_recall,
+        #                self.val_acc,
+        #                self.val_auroc,
+        #                self.val_mcc,
+        #                self.val_kappa]:
+        #     metric.reset()
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def on_train_epoch_end(self):
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    def on_test_epoch_end(self):
+        # TODO: Figure out logging (probably tensorboard)
+        logger.info(f"Test epoch end. Reminder to implement logging.")
+
+    def on_before_optimizer_step(self, optimizer):
+        # Compute the 2-norm for each layer
+        # If using mixed precision, the gradients are already unscaled here
+        norms = pl.utilities.grad_norm(self.encoder, norm_type=2)
+        self.log_dict(norms)
 
     def configure_optimizers(self):
         match (self.optimizer):
@@ -105,3 +253,8 @@ class SWRegressor(pl.LigtningModule):
             }
         else:
             return optimizer
+
+# def crps(outputs, targets):
+
+
+#     return loss
