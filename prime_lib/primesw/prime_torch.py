@@ -279,6 +279,13 @@ def crps(outputs, targets):
         outputs = outputs.view(1, outputs.shape(0))
     if targets.dim() < 2:
         targets = targets.view(1, targets.shape(0))
+    # This function uses the 1st, 3rd, 5th... neurons in the last layer as the means of the output 
+    # Gaussian and the 2nd, 4th, 6th... neurons as the variance of the output Gaussians for each
+    # target parameter. See http://www.dl.begellhouse.com/journals/52034eb04b657aea,3ec0b84376cff3d2,1801e97431c5911b.html
+    # section 2 (equations 2 and 3) for more info. 
     ep = torch.abs(targets - outputs[:, ::2])
-    loss = outputs[:, 1::2] * ((ep/outputs[:, 1::2]) * torch.erf((ep/(np.sqrt(2)*outputs[:, 1::2]))) + np.sqrt(2/np.pi) * torch.exp(-ep**2 / (2*outputs[:, 1::2]**2)) - 1/np.sqrt(np.pi))
+    loss = outputs[:, 1::2] * ((ep/outputs[:, 1::2]) * torch.erf((ep/(np.sqrt(2)*outputs[:, 1::2])))
+                                + np.sqrt(2/np.pi) * torch.exp(-ep**2 / (2*outputs[:, 1::2]**2))
+                                - 1/np.sqrt(np.pi)
+                                )
     return loss
