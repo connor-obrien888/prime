@@ -1,0 +1,54 @@
+log_level: DEBUG
+#Logs and experiments
+experiments:
+  checkpoint: "~/data/prime/checkpoints"
+  trainer:
+    accelerator: gpu # "cpu", "mps", "auto"
+    devices: [0] # "auto", 1, [0, 2], etc
+    strategy: auto # multi-gpu: ddp_find_unused_parameters_true, single-gpu: "auto"
+    precision: 32 # "16-mixed", "32-true", "32-float", "16-mixed", etc
+    profiler: simple # options are 'XLAProfiler' (TPU), 'PyTorchProfiler', warning: PyTorchProfiler only works on cpu/gpu according to docs
+    max_epochs: 1 # number of epochs to train for
+    log_every_n_steps: 10
+    check_val_every_n_epoch: 1
+    detect_anomaly: False
+    limit_train_batches: 1.0  #0.05
+    limit_val_batches: 1.0
+    limit_test_batches: 1
+    limit_predict_batches: 1
+    gradient_clip_val: 10
+    gradient_clip_algorithm: value
+  #TODO: add tensorboard configuration here
+#Dataset configuration
+data:
+  target_features: []
+  input_features: []
+  position_features: []
+  cadence: '100s'
+  window: 100
+  stride: 0
+  interp_frac: 0.05
+  trn_bounds: ['20150902 00:00:00+0000', '20210411 00:00:00+0000']
+  val_bounds: ['20210411 00:00:00+0000', '20230222 00:00:00+0000']
+  tst_bounds: ['20230222 00:00:00+0000', '20250101 00:00:00+0000']
+  datastore: "~/data/prime/sw_data.h5"
+  key: "mms_wind_combined"
+# Model configuration
+model:
+  decoder_type: 'linear'
+  encoder_type: 'rnn'
+  decoder_hidden_layers: [128],
+  encoder_hidden_dim: 128,
+  encoder_num_layers: 1,
+  p_drop: 0.1,
+  pos_encoding_size: 8,
+
+# Optimization configuration
+opt:
+  loss: 'mae'
+  optimizer: 'adam'
+  lr: 1e-3
+  lr_scheduler: None
+  weight_decay: 0
+  batch_size: 32
+  num_workers: 1

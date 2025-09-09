@@ -1,0 +1,4 @@
+1.13.1 CUDA 11.7 torchvision 0.14.1 torchaudio 0.13.1 Python 3.10
+2.0.1  CUDA 11.8 torchvision 0.15.2 torchaudio 2.0.2  Python 3.11
+2.1.2  CUDA 12.1 torchvision 0.16.2 torchaudio 2.1.2  Python 3.11
+2.2.0  CUDA 12.1 torchvision 0.17.0 torchaudio 2.2.0  Python 3.11
