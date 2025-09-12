@@ -62,13 +62,13 @@ class SWDataset(Dataset):
             self.raw_data = pd.read_hdf(self.datastore, key = self.key, mode = "r")
         else:
             self.raw_data = raw_data
-        if (max_time > self.raw_data['time'].max()):
+        if (max_time > self.raw_data['Epoch'].max()):
             logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in raw_data")
-        if (min_time < self.raw_data['time'].min()):
+        if (min_time < self.raw_data['Epoch'].min()):
             logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in raw_data")
         self.raw_data = self.raw_data.loc[
-            (self.raw_data['time'] <= max_time)&
-            (self.raw_data['time'] >= min_time), :
+            (self.raw_data['Epoch'] <= max_time)&
+            (self.raw_data['Epoch'] >= min_time), :
         ] #Cut time of base data to be between min and max times
 
         #Normalize the target, input, and position data
@@ -100,11 +100,11 @@ class SWDataset(Dataset):
             input_arr[i,:,:] = input_scaled.iloc[i:(i+self.window), :].values # Move the window through the input data
             position_arr[i,:] = position_scaled.iloc[(i+self.window+self.stride-1), :].values # Get the target position associated with the target
             target_arr[i,:] = target_scaled.iloc[(i+self.window+self.stride-1), :].values # Get the target stride away from the last entry in the timeseries
-        self.input_data = torch.tensor(input_arr) # Turn numpy arrays into tensors
-        self.target_data = torch.tensor(target_arr)
-        self.position_data = torch.tensor(position_arr)
-        self.target_timestamps = [time.strftime('%Y%m%d %H:%M:%S+0000') for time in self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time']]
-        # self.target_timestamps = self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time'].to_numpy() # Store the times of each target for QA
+        self.input_data = torch.tensor(input_arr, dtype = torch.float32) # Turn numpy arrays into tensors
+        self.target_data = torch.tensor(target_arr, dtype = torch.float32)
+        self.position_data = torch.tensor(position_arr, dtype = torch.float32)
+        self.target_timestamps = [time.strftime('%Y%m%d %H:%M:%S+0000') for time in self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'Epoch']]
+        # self.target_timestamps = self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'Epoch'].to_numpy() # Store the times of each target for QA
 
     def __len__(self): # A torch dataset must have a __len__ method
         return self.input_data.shape[0]
