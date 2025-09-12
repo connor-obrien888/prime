@@ -100,7 +100,7 @@ class SWRegressor(pl.LightningModule):
                 self.loss_fn = lambda outputs, targets: torch.nn.functional.l1_loss(
                     outputs,
                     targets,
-                )
+                ) 
             case "crps":
                 self.loss_fn = lambda outputs, targets: crps(
                     outputs,

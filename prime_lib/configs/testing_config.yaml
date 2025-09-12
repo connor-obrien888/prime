@@ -18,6 +18,7 @@ experiments:
     limit_predict_batches: 1
     gradient_clip_val: 10
     gradient_clip_algorithm: value
+    tensorboard_path: "~/data/prime/tensorboard_logs"
   #TODO: add tensorboard configuration here
 #Dataset configuration
 data:
