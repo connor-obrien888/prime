@@ -100,9 +100,9 @@ class SWDataset(Dataset):
             input_arr[i,:,:] = input_scaled.iloc[i:(i+self.window), :].values # Move the window through the input data
             position_arr[i,:] = position_scaled.iloc[(i+self.window+self.stride-1), :].values # Get the target position associated with the target
             target_arr[i,:] = target_scaled.iloc[(i+self.window+self.stride-1), :].values # Get the target stride away from the last entry in the timeseries
-        self.input_data = torch.tensor(input_arr) # Turn numpy arrays into tensors
-        self.target_data = torch.tensor(target_arr)
-        self.position_data = torch.tensor(position_arr)
+        self.input_data = torch.tensor(input_arr, dtype = torch.float32) # Turn numpy arrays into tensors
+        self.target_data = torch.tensor(target_arr, dtype = torch.float32)
+        self.position_data = torch.tensor(position_arr, dtype = torch.float32)
         self.target_timestamps = [time.strftime('%Y%m%d %H:%M:%S+0000') for time in self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time']]
         # self.target_timestamps = self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time'].to_numpy() # Store the times of each target for QA
 

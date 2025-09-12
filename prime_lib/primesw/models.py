@@ -69,7 +69,7 @@ class LinearDecoder(nn.Module):
   
         return self.network(combined)
     
-class RecurrentEncoder():
+class RecurrentEncoder(nn.Module):
     def __init__(
             self,
             in_dim,
