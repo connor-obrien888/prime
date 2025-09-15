@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 import lightning.pytorch as pl
+import torchmetrics
 import gc
 import numpy as np
 import pandas as pd
@@ -52,14 +53,14 @@ class SWRegressor(pl.LightningModule):
         self.pos_encoding_size = pos_encoding_size
 
         # Loss parameters
-        self.trn_mae = None
-        self.val_mae = None
-        self.tst_mae = None
+        self.trn_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
+        self.val_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
+        self.tst_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
         self.loss = loss
         if self.loss == 'crps':
-            self.trn_crps = None
-            self.val_crps = None
-            self.tst_crps = None
+            self.trn_crps = GaussianContinuousRankedProbabilityScore()
+            self.val_crps = GaussianContinuousRankedProbabilityScore()
+            self.tst_crps = GaussianContinuousRankedProbabilityScore()
 
         # Initialize the encoder
         match self.encoder_type:
@@ -317,3 +318,18 @@ def crps(outputs, targets):
                                 - 1/np.sqrt(np.pi)
                                 )
     return loss
+
+def GaussianContinuousRankedProbabilityScore(torchmetrics.Metric):
+    # Like torchmetrics.regression.crps.ContinuousRankedProbabilityScore but takes the mean
+    # and variance of a Gaussian instead of an ensemble of predictions as its input.
+    # From https://lightning.ai/docs/torchmetrics/stable/pages/implement.html
+    is_differentiable = True # Is the metric differentiable? Yes, the CRPS is differentiable.
+    higher_is_better = False # Is a higher metric better (e.g. accuracy)? No, CRPS is like MAE where lower is better.
+    full_state_update = False # Does .update() need to know the global metric state? No, each score is independent.
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_state("score", default = torch.tensor(0), dist_reduce_fx='mean')
+    def update(self, preds, target):
+        self.score = crps(preds, target)
+    def compute(self):
+        return self.score
