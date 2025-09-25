@@ -185,9 +185,10 @@ fs_regions['stop'] = pd.to_datetime(fs_regions['stop'], utc = True)  # Stops are
 # Create a dataframe to put all the data into
 combo_df = pd.DataFrame([])
 combo_df['Epoch'] = pd.date_range(mms_labels['Epoch'].min(), mms_labels['Epoch'].max(), freq = "1min") # Make a time for every minute so gaps can be identified as nans
-suffixes = ['labels', '_fpi_i', '_fpi_e', '_mec', '_fgm', '_swe', '_mfi']
+suffixes = ['_labels', '_fpi_i', '_fpi_e', '_mec', '_fgm', '_swe', '_mfi']
 for i, dataframe in enumerate([mms_labels, fpi_i_data, fpi_e_data, mec_data, fgm_data, swe_data, mfi_data]):
-    combo_df = combo_df.merge(dataframe, on = 'Epoch', suffixes=('', suffixes[i]))
+    combo_df = combo_df.merge(dataframe, on = 'Epoch', suffixes=('', suffixes[i]), how = 'left')
+    combo_df['interped' + suffixes[i]] = combo_df[dataframe.columns[1]].isna()
 combo_df = combo_df.rename(columns = {'count' : 'count_fpi_i'})
 
 # Mark entries when MMS is "stable" in a given region

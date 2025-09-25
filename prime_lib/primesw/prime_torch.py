@@ -205,9 +205,9 @@ class SWRegressor(pl.LightningModule):
     
     def on_validation_epoch_end(self):
         # Compute and log all accumulated metrics
-        self.log('val_mae', self.val_mae.compute(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
+        self.log('val_mae', self.val_mae.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
         if self.loss == 'crps':
-            self.log('val_crps', self.val_crps.compute(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
+            self.log('val_crps', self.val_crps.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
 
         # TODO: Plot the 2D joint distributions on the validation set
         # TODO: Plot a holdout event

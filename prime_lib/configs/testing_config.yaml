@@ -27,6 +27,7 @@ data:
   position_features: ['mms1_mec_r_gse_0', 'mms1_mec_r_gse_1', 'mms1_mec_r_gse_2']
   region: 'solar wind'
   cadence: '100s'
+  interpolate: True
   window: 100
   stride: 0
   interp_frac: 0.05
