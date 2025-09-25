@@ -1,9 +1,9 @@
-[tool.poetry]
+[project]
 name = "primesw"
 version = "0.5.0"
 description = "Probabilistic Regressor for Input to the Magnetosphere Estimation (Solar Wind)"
-authors = ["Connor OBrien <obrienco@bu.edu>",]
-license = "GPL-3.0"
+authors = [{name = "Connor OBrien", email = "obrienco@bu.edu"}]
+license = {text = "GPL-3.0"}
 readme = "README.md"
 classifiers=[
       'Development Status :: 4 - Beta',
@@ -13,26 +13,25 @@ classifiers=[
       'Topic :: Scientific/Engineering :: Astronomy',
       'Topic :: Scientific/Engineering :: Atmospheric Science'
 ]
+
+requires-python = ">=3.8,<3.11"
+dependencies = [
+      "tensorflow (>=2.8.0,<3.0.0)",
+      "matplotlib>=3.4",
+      "pandas (>=1.2,<2.0)",
+      "scipy>=1.6",
+      "scikit-learn>=0.24",
+      "numpy (>=1.20.3,<2.0.0)",
+      "protobuf==3.20.0",
+      "tables (>=3.8.0,<4.0.0)",
+      "tensorflow-io-gcs-filesystem==0.25.0",
+      "cdasws (>=1.8.9,<2.0.0)",
+      "xarray (>=2023.1.0,<2024.0.0)",
+      "cdflib (>=1.3.2,<2.0.0)",
+]
+
+[tool.poetry]
 include = ["primesw"]
-
-[tool.poetry.dependencies]
-python = ">=3.8,<3.11"
-tensorflow = "^2.8.0"
-matplotlib = ">=3.4"
-pandas = "^1.2"
-scipy = ">=1.6"
-scikit-learn = ">=0.24"
-numpy = "^1.20.3"
-protobuf = "3.20.0"
-tables = "^3.8.0"
-tensorflow-io-gcs-filesystem = "0.25.0"
-cdasws = "^1.8.9"
-xarray = "^2023.1.0"
-cdflib = "^1.3.2"
-
-
-[tool.poetry.group.dev.dependencies]
-ipykernel = "^6.29.5"
 
 [project.urls]
 Homepage = "https://github.com/connor-obrien888/prime"
