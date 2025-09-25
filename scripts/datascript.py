@@ -154,35 +154,29 @@ if save_raw:
 
 # Load the labeled MMS data from Toy-Edens et al. 2024 https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2024JA032431
 # Downloaded from zenodo.org/records/10491878
-logger.info(f"Loading labeled data.")
 mms_labels = pd.read_csv(DATAPATH + 'mms/labeled_sunside_data.csv') # This object will have the MMS data from FPI, FGM, and MEC added to it.
 mms_labels = mms_labels[mms_labels['probe'] == 'mms1'] # Select only MMS1 so we don't overtrain
 mms_labels['Epoch'] = pd.to_datetime(mms_labels['Epoch'], utc = True) # Change Epoch to a datetime rather than an Epoch
-mms_labels.index = mms_labels['Epoch'] # Turn the labels index into Epoch to fit it into a larger minutely dataframe to identify gaps
 
 # Load just the times when MMS is "stable" in the solar wind for 15 or more minutes (Used to create dataset stability flag)
-logger.info(f"Loading SW regions.")
 sw_regions = pd.read_csv(DATAPATH + 'mms/solar_wind_region_list.csv')
 sw_regions = sw_regions[sw_regions['probe'] == 'mms1'] # Select only MMS1 so we don't overtrain
 sw_regions['start'] = pd.to_datetime(sw_regions['start'], utc = True)
 sw_regions['stop'] = pd.to_datetime(sw_regions['stop'], utc = True)  # Stops are on the 59th second of the minute so should be inclusive when binning MMS data
 
 # Load just the times when MMS is "stable" in the magnetosheath for 15 or more minutes (Used to create dataset stability flag)
-logger.info(f"Loading SH regions.")
 sh_regions = pd.read_csv(DATAPATH + 'mms/magnetosheath_region_list.csv')
 sh_regions = sh_regions[sh_regions['probe'] == 'mms1'] # Select only MMS1 so we don't overtrain
 sh_regions['start'] = pd.to_datetime(sh_regions['start'], utc = True)
 sh_regions['stop'] = pd.to_datetime(sh_regions['stop'], utc = True)  # Stops are on the 59th second of the minute so should be inclusive when binning MMS data
 
 # Load just the times when MMS is "stable" in the magnetosphere for 15 or more minutes (Used to create dataset stability flag)
-logger.info(f"Loading MS regions.")
 ms_regions = pd.read_csv(DATAPATH + 'mms/magnetosphere_region_list.csv')
 ms_regions = ms_regions[ms_regions['probe'] == 'mms1'] # Select only MMS1 so we don't overtrain
 ms_regions['start'] = pd.to_datetime(ms_regions['start'], utc = True)
 ms_regions['stop'] = pd.to_datetime(ms_regions['stop'], utc = True)  # Stops are on the 59th second of the minute so should be inclusive when binning MMS data
 
 # Load just the times when MMS is "stable" in the ion foreshock for 15 or more minutes (Used to create dataset stability flag)
-logger.info(f"Loading FS regions.")
 fs_regions = pd.read_csv(DATAPATH + 'mms/ion_foreshock_region_list.csv')
 fs_regions = fs_regions[fs_regions['probe'] == 'mms1'] # Select only MMS1 so we don't overtrain
 fs_regions['start'] = pd.to_datetime(fs_regions['start'], utc = True)
@@ -190,23 +184,11 @@ fs_regions['stop'] = pd.to_datetime(fs_regions['stop'], utc = True)  # Stops are
 
 # Create a dataframe to put all the data into
 combo_df = pd.DataFrame([])
-logger.info(f"Creating combined dataframe.")
 combo_df['Epoch'] = pd.date_range(mms_labels['Epoch'].min(), mms_labels['Epoch'].max(), freq = "1min") # Make a time for every minute so gaps can be identified as nans
-# combo_df = combo_df.loc[
-#     (combo_df['Epoch'] >= pd.to_datetime(datestrs[0]))& # REMOVE THIS CUT IN PRODUCTION THIS IS JUST FOR TESTING
-#     (combo_df['Epoch'] < pd.to_datetime(datestrs[1])),
-#     :
-# ]
-combo_df.index = combo_df['Epoch'] # Make the index a time as well to simplify merging mms_labels in
-logger.info(f"Merging raw data into combined dataframe.")
-for dataframe in [mms_labels, fpi_i_data, fpi_e_data, mec_data, fgm_data, swe_data, mfi_data]:
-    dataframe.index = dataframe['Epoch']
-    for key in dataframe.columns:
-        if (key == 'Epoch'):
-            continue
-        combo_df[key] = dataframe[key]
-    dataframe = dataframe.reset_index(drop = True)
-combo_df = combo_df.reset_index(drop = True)
+suffixes = ['labels', '_fpi_i', '_fpi_e', '_mec', '_fgm', '_swe', '_mfi']
+for i, dataframe in enumerate([mms_labels, fpi_i_data, fpi_e_data, mec_data, fgm_data, swe_data, mfi_data]):
+    combo_df = combo_df.merge(dataframe, on = 'Epoch', suffixes=('', suffixes[i]))
+combo_df = combo_df.rename(columns = {'count' : 'count_fpi_i'})
 
 # Mark entries when MMS is "stable" in a given region
 logger.info(f"Marking stable regions.")

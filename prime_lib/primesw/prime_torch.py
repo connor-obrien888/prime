@@ -97,7 +97,7 @@ class SWRegressor(pl.LightningModule):
         # Handle the loss type
         match self.loss:
             case "mae":
-                self.loss_fn = lambda outputs, targets: torch.nn.functional.L1Loss(
+                self.loss_fn = lambda outputs, targets: torch.nn.functional.l1_loss(
                     outputs,
                     targets,
                 )

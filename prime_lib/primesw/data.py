@@ -62,13 +62,13 @@ class SWDataset(Dataset):
             self.raw_data = pd.read_hdf(self.datastore, key = self.key, mode = "r")
         else:
             self.raw_data = raw_data
-        if (max_time > self.raw_data['time'].max()):
+        if (max_time > self.raw_data['Epoch'].max()):
             logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in raw_data")
-        if (min_time < self.raw_data['time'].min()):
+        if (min_time < self.raw_data['Epoch'].min()):
             logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in raw_data")
         self.raw_data = self.raw_data.loc[
-            (self.raw_data['time'] <= max_time)&
-            (self.raw_data['time'] >= min_time), :
+            (self.raw_data['Epoch'] <= max_time)&
+            (self.raw_data['Epoch'] >= min_time), :
         ] #Cut time of base data to be between min and max times
 
         #Normalize the target, input, and position data
@@ -100,11 +100,11 @@ class SWDataset(Dataset):
             input_arr[i,:,:] = input_scaled.iloc[i:(i+self.window), :].values # Move the window through the input data
             position_arr[i,:] = position_scaled.iloc[(i+self.window+self.stride-1), :].values # Get the target position associated with the target
             target_arr[i,:] = target_scaled.iloc[(i+self.window+self.stride-1), :].values # Get the target stride away from the last entry in the timeseries
-        self.input_data = torch.tensor(input_arr) # Turn numpy arrays into tensors
-        self.target_data = torch.tensor(target_arr)
-        self.position_data = torch.tensor(position_arr)
-        self.target_timestamps = [time.strftime('%Y%m%d %H:%M:%S+0000') for time in self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time']]
-        # self.target_timestamps = self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'time'].to_numpy() # Store the times of each target for QA
+        self.input_data = torch.tensor(input_arr, dtype = torch.float32) # Turn numpy arrays into tensors
+        self.target_data = torch.tensor(target_arr, dtype = torch.float32)
+        self.position_data = torch.tensor(position_arr, dtype = torch.float32)
+        self.target_timestamps = [time.strftime('%Y%m%d %H:%M:%S+0000') for time in self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'Epoch']]
+        # self.target_timestamps = self.raw_data.iloc[(self.window+self.stride-1):].loc[:,'Epoch'].to_numpy() # Store the times of each target for QA
 
     def __len__(self): # A torch dataset must have a __len__ method
         return self.input_data.shape[0]
@@ -125,6 +125,8 @@ class SWDataModule(pl.LightningDataModule):
         input_features,
         position_features,
         cadence,
+        region,
+        cuts = None,
         window = None,
         stride = None,
         interp_frac = None,
@@ -141,6 +143,8 @@ class SWDataModule(pl.LightningDataModule):
         self.input_features = input_features # Features model uses as input
         self.position_features = position_features # Positions of the targets added to the inputs
         self.cadence = cadence # Cadence of data
+        self.region = region # Region of space trained to (e.g. 'solar wind', 'magnetosheath')
+        self.cuts = cuts # How to cut data (e.g. stability, solar wind table)
         self.batch_size = batch_size # Training batch size
         self.num_workers = num_workers # Number of workers for loading data
 
@@ -161,6 +165,14 @@ class SWDataModule(pl.LightningDataModule):
         self.datastore = datastore # Open the HDF with combined target and input data
         self.key = key # Key in HDF with combined target and input data
         self.raw_data = pd.read_hdf(datastore, key = self.key, mode = "r") # Load the HDF of data with no cuts
+        self.raw_data = self.raw_data.loc[(self.raw_data['modified_named_label'] == self.region)&
+                                          (self.raw_data['stable'] == 1), :] # Isolate the desired region/type of solar wind
+        if self.cuts is not None: # Are we cutting the dataset for only stable regions, or other cuts?
+            for cut in self.cuts:
+                if cut == 'stability': # Only train on data where MMS is in same region for 15+ minutes
+                    self.raw_data = self.raw_data[self.raw_data['stable'] == 1, :]
+                if cut == 'solar wind table': # Only use data with the solar wind energy-azimuth table
+                    self.raw_data = self.raw_data[self.raw_data['SW_table'] == 1, :]
 
         tar_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
         for feature in self.target_features:
