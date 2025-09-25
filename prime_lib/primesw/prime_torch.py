@@ -315,11 +315,10 @@ def crps(outputs, targets):
     ep = torch.abs(targets - outputs[:, ::2])
     loss = outputs[:, 1::2] * ((ep/outputs[:, 1::2]) * torch.erf((ep/(np.sqrt(2)*outputs[:, 1::2])))
                                 + np.sqrt(2/np.pi) * torch.exp(-ep**2 / (2*outputs[:, 1::2]**2))
-                                - 1/np.sqrt(np.pi)
-                                )
+                                - 1/np.sqrt(np.pi))
     return loss
 
-def GaussianContinuousRankedProbabilityScore(torchmetrics.Metric):
+class GaussianContinuousRankedProbabilityScore(torchmetrics.Metric):
     # Like torchmetrics.regression.crps.ContinuousRankedProbabilityScore but takes the mean
     # and variance of a Gaussian instead of an ensemble of predictions as its input.
     # From https://lightning.ai/docs/torchmetrics/stable/pages/implement.html
