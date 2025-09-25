@@ -4,7 +4,7 @@ decoder_type: linear
 encoder_hidden_dim: 4
 encoder_num_layers: 1
 encoder_type: rnn
-in_dim: 1
+in_dim: 11
 loss: mae
 lr: 0.001
 lr_scheduler: cosine
@@ -12,5 +12,5 @@ optimizer: adam
 p_drop: 0.1
 pos_dim: 3
 pos_encoding_size: 4
-tar_dim: 1
+tar_dim: 7
 weight_decay: 0

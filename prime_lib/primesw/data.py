@@ -125,6 +125,8 @@ class SWDataModule(pl.LightningDataModule):
         input_features,
         position_features,
         cadence,
+        region,
+        cuts = None,
         window = None,
         stride = None,
         interp_frac = None,
@@ -141,6 +143,8 @@ class SWDataModule(pl.LightningDataModule):
         self.input_features = input_features # Features model uses as input
         self.position_features = position_features # Positions of the targets added to the inputs
         self.cadence = cadence # Cadence of data
+        self.region = region # Region of space trained to (e.g. 'solar wind', 'magnetosheath')
+        self.cuts = cuts # How to cut data (e.g. stability, solar wind table)
         self.batch_size = batch_size # Training batch size
         self.num_workers = num_workers # Number of workers for loading data
 
@@ -161,6 +165,14 @@ class SWDataModule(pl.LightningDataModule):
         self.datastore = datastore # Open the HDF with combined target and input data
         self.key = key # Key in HDF with combined target and input data
         self.raw_data = pd.read_hdf(datastore, key = self.key, mode = "r") # Load the HDF of data with no cuts
+        self.raw_data = self.raw_data.loc[(self.raw_data['modified_named_label'] == self.region)&
+                                          (self.raw_data['stable'] == 1), :] # Isolate the desired region/type of solar wind
+        if self.cuts is not None: # Are we cutting the dataset for only stable regions, or other cuts?
+            for cut in self.cuts:
+                if cut == 'stability': # Only train on data where MMS is in same region for 15+ minutes
+                    self.raw_data = self.raw_data[self.raw_data['stable'] == 1, :]
+                if cut == 'solar wind table': # Only use data with the solar wind energy-azimuth table
+                    self.raw_data = self.raw_data[self.raw_data['SW_table'] == 1, :]
 
         tar_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
         for feature in self.target_features:
