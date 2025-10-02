@@ -5,6 +5,8 @@ import torchmetrics
 import gc
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from loguru  import logger
 
 from models import LinearDecoder, RecurrentEncoder
@@ -15,6 +17,8 @@ class SWRegressor(pl.LightningModule):
             optimizer = "adam",
             lr = 1e-3,
             lr_scheduler = None,
+            patience=3,
+            factor=0.5,
             weight_decay = 0,
             in_dim = 14,
             tar_dim = 1,
@@ -39,6 +43,8 @@ class SWRegressor(pl.LightningModule):
         self.lr = lr
         self.weight_decay = weight_decay
         self.lr_scheduler = lr_scheduler
+        self.patience = patience
+        self.factor = factor
 
         # Model Parameters
         self.in_dim = in_dim
@@ -53,14 +59,15 @@ class SWRegressor(pl.LightningModule):
         self.pos_encoding_size = pos_encoding_size
 
         # Loss parameters
-        self.trn_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
-        self.val_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
-        self.tst_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
         self.loss = loss
+        # if self.loss == 'mae': #NOTE: I don't think we need any additional scalars logged for MAE-trained models? Besides the loss, which is handled later.
+            # self.trn_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
+            # self.val_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
+            # self.tst_mae = torchmetrics.MeanAbsoluteError(num_outputs = self.tar_dim)
         if self.loss == 'crps':
-            self.trn_crps = GaussianContinuousRankedProbabilityScore()
-            self.val_crps = GaussianContinuousRankedProbabilityScore()
-            self.tst_crps = GaussianContinuousRankedProbabilityScore()
+            self.trn_mae = ProbabilisticMeanAbsoluteError()
+            self.val_mae = ProbabilisticMeanAbsoluteError()
+            self.tst_mae = ProbabilisticMeanAbsoluteError()
 
         # Initialize the encoder
         match self.encoder_type:
@@ -113,6 +120,11 @@ class SWRegressor(pl.LightningModule):
                 )
             case _:
                 raise ValueError(f"Invalid loss type {self.loss}")
+            
+        # Define things we keep around for validation purposes, not passed to the model
+        self.val_predictions = []
+        self.val_targets = []
+        self.val_times = []
     
     def forward(self, x, position):
         out, h = self.encoder.forward(x)
@@ -134,17 +146,15 @@ class SWRegressor(pl.LightningModule):
         }
 
     def training_step(self, batch, batch_idx):
-        timeseries, position, target, _ = batch
+        timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
         # Calculate loss
         loss = self.loss_fn(y_hat, target)
 
         # Update the metrics
-        self.trn_mae.update(y_hat, target)
         if self.loss == 'crps':
-            self.trn_crps.update(y_hat, target)
+            self.trn_mae.update(y_hat, target)
 
-        # TODO: Figure out logging (probably tensorboard)
         self.log(
             'train_loss',
             loss,
@@ -157,27 +167,23 @@ class SWRegressor(pl.LightningModule):
         # Log current learning rate from optimizer
         lr = self.trainer.optimizers[0].param_groups[0]['lr']
         self.log('lr', lr, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
-        self.log('trn_mae', self.trn_mae, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        if self.loss == 'crps': # If the model is being trained to the continuous rank probability score
-            self.log('trn_crps', self.trn_crps, on_step=False, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
         return loss
     
     def validation_step(self, batch, batch_idx):
-        timeseries, position, target, _ = batch
+        timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
         # Calculate loss
         val_loss = self.loss_fn(y_hat, target)
 
-        # TODO: Figure out logging (probably tensorboard)
         # Update the metrics
-        self.val_mae.update(y_hat, target)
         if self.loss == 'crps':
-            self.val_crps.update(y_hat, target)
-        self.log('val_mae', self.val_mae, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        if self.loss == 'crps': # If the model is being trained to the continuous rank probability score
-            self.log('val_crps', self.val_crps, on_step=False, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
+            self.val_mae.update(y_hat, target)
+        self.log('val_loss', val_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
 
-        # TODO: Store the batches so we can make a 2D joint distribution at epoch end
+        # Store the batches so we can make a 2D joint distribution at epoch end
+        self.val_predictions.append(y_hat.cpu())
+        self.val_targets.append(target.cpu())
+        self.val_times.append(times)
         
         return val_loss
 
@@ -187,14 +193,10 @@ class SWRegressor(pl.LightningModule):
         # Calculate loss
         test_loss = self.loss_fn(y_hat, target)
 
-        # TODO: Figure out logging (probably tensorboard)
         # Update the metrics
-        self.tst_mae.update(y_hat, target)
         if self.loss == 'crps':
-            self.tst_crps.update(y_hat, target)
-        self.log('tst_mae', self.tst_mae, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        if self.loss == 'crps': # If the model is being trained to the continuous rank probability score
-            self.log('tst_crps', self.tst_crps, on_step=False, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
+            self.tst_mae.update(y_hat, target)
+        self.log('test_loss', test_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         
         return {
             "predictions": y_hat,
@@ -205,18 +207,47 @@ class SWRegressor(pl.LightningModule):
     
     def on_validation_epoch_end(self):
         # Compute and log all accumulated metrics
-        self.log('val_mae', self.val_mae.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
         if self.loss == 'crps':
-            self.log('val_crps', self.val_crps.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
+            self.log('val_mae', self.val_mae.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
+            # Clear all the metrics
+            self.val_mae.reset()
 
         # TODO: Plot the 2D joint distributions on the validation set
+        predictions = torch.cat(self.val_predictions, dim = 0).numpy()
+        targets = torch.cat(self.val_targets, dim = 0).numpy()
+        if predictions.shape[-1] == (self.tar_dim * 2): # Are we using one that outputs a mean and a standard deviation?
+            predictions = predictions[:, ::2]
+        fig, ax = plt.subplots(nrows = 1, ncols = self.tar_dim, figsize = (6 * self.tar_dim, 6))
+        nbins = 50
+        for i in range(self.tar_dim):
+            im = ax[i].hexbin(
+                targets[:, i],
+                predictions[:, i],
+                gridsize = nbins,
+                norm = LogNorm(1e0, 1e3),
+                cmap = 'inferno', # TODO: make a fun new colormap
+            )
+            # ax[i].set_aspect("equal")
+            ax[i].set_xlabel(f"Target {i}")
+            ax[i].set_ylabel(f"Predcted {i}")
+            ax[i].set_title(f"Feature {i}")
+            x0, x1 = ax[i].get_xlim()
+            y0, y1 = ax[i].get_xlim()
+            bounds = [max(x0, y0), min(x1, y1)]
+            ax[i].plot(
+                [0, 1],
+                [0, 1],
+                color="k",
+                linestyle = "--",
+                transform = ax[i].transAxes,
+            )
+        self.logger.experiment.add_figure(f"val_jd_epoch{self.current_epoch}", fig)
+
         # TODO: Plot a holdout event
-        # TODO: Clear all the data from the stored validation batches
-        
-        # Clear all the metrics
-        self.val_mae.reset()
-        if self.loss == 'crps':
-            self.val_crps.reset()
+
+        self.val_predictions.clear()
+        self.val_targets.clear()
+        self.val_times.clear()
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -225,10 +256,8 @@ class SWRegressor(pl.LightningModule):
         torch.cuda.empty_cache()
 
     def on_test_epoch_end(self):
-        # TODO: Figure out logging (probably tensorboard)
-        self.log('tst_mae', self.tst_mae.compute(), on_epoch=True, logger=True, sync_dist=True)
         if self.loss == 'crps':
-            self.log('tst_crps', self.tst_crps.compute(), on_epoch=True, logger=True, sync_dist=True)
+            self.log('tst_mae', self.tst_mae.compute(), on_epoch=True, logger=True, sync_dist=True)
 
     def on_before_optimizer_step(self, optimizer):
         # Compute the 2-norm for each layer
@@ -280,15 +309,15 @@ class SWRegressor(pl.LightningModule):
                     'interval': 'epoch',
                     'frequency': 1
                 }
-            case "exp":
-                scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                    optimizer, gamma=self.gamma,
-                )
-                scheduler_config = {
-                    'scheduler': scheduler,
-                    'interval': 'epoch',
-                    'frequency': 1
-                }
+            # case "exp":
+            #     scheduler = torch.optim.lr_scheduler.ExponentialLR(
+            #         optimizer, gamma=self.gamma,
+            #     )
+            #     scheduler_config = {
+            #         'scheduler': scheduler,
+            #         'interval': 'epoch',
+            #         'frequency': 1
+            #     }
             case _:
                 raise ValueError(f"Unsupported scheduler: {self.lr_scheduler}")
 
@@ -330,5 +359,20 @@ class GaussianContinuousRankedProbabilityScore(torchmetrics.Metric):
         self.add_state("score", default = torch.tensor(0), dist_reduce_fx='mean')
     def update(self, preds, target):
         self.score = crps(preds, target)
+    def compute(self):
+        return self.score
+
+class ProbabilisticMeanAbsoluteError(torchmetrics.Metric):
+    # A version of MAE used as a metric for dual-output models trained with the CRPS.
+    # Splits out the means of the distributions and uses them to calculate the MAE.
+    # From https://lightning.ai/docs/torchmetrics/stable/pages/implement.html
+    is_differentiable = True # Is the metric differentiable? Yes, the MAE is differentiable.
+    higher_is_better = False # Is a higher metric better (e.g. accuracy)? No.
+    full_state_update = False # Does .update() need to know the global metric state? No, each score is independent.
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.add_state("score", default = torch.tensor(0), dist_reduce_fx='mean')
+    def update(self, preds, target):
+        self.score = torch.nn.functional.l1_loss(preds[:, ::2], target)
     def compute(self):
         return self.score

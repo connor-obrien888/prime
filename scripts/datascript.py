@@ -85,6 +85,7 @@ def cdf_to_df_remote(dataset_name, var_list, start_date, end_date, time_name = '
 
 # Load the data from MMS and Wind
 save_raw = True # Whether to save the raw data in the mms_data.h5 and wind_data.h5 HDF file
+download = False # Whether to redownload the raw data from each instrument or just use what's in the file
 cadence = '1min'
 datestrs = ['2015-09-01 00:00:00+00:00', '2025-01-01 00:00:00+00:00']
 fpi_i_var_list = [
@@ -130,27 +131,36 @@ mec_dataset = 'MMS1_MEC_SRVY_L2_EPHT89D' # Level 2 survey with EPHT89D field mod
 fgm_dataset = 'MMS1_FGM_SRVY_L2' # Level 2 survey
 mfi_dataset = 'WI_H0_MFI' # Key parameter B from Wind
 swe_dataset = 'WI_K0_SWE' # Key parameter plasma from Wind
-logger.info(f"Loading FPI ion data.")
-fpi_i_data = load_range(fpi_i_dataset, fpi_i_var_list, datestrs[0], datestrs[1], load_freq='1MS', resample_freq=cadence, verbose=True)
-logger.info(f"Loading FPI electron data.")
-fpi_e_data = load_range(fpi_e_dataset, fpi_e_var_list, datestrs[0], datestrs[1], load_freq='1MS', resample_freq=cadence)
-logger.info(f"Loading MEC data.")
-mec_data = load_range(mec_dataset, mec_var_list, datestrs[0], datestrs[1], load_freq='1MS', resample_freq=cadence)
-logger.info(f"Loading FGM data.")
-fgm_data = load_range(fgm_dataset, fgm_var_list, datestrs[0], datestrs[1], load_freq='1D', resample_freq=cadence) # load_freq is shorter here, if longer than ~10D RAM is overloaded. 1D is no slower than 10D
-logger.info(f"Loading SWE data.")
-swe_data = load_range(swe_dataset, swe_var_list, datestrs[0], datestrs[1], load_freq='1MS', interp_freq=cadence)
-logger.info(f"Loading FPI data.")
-mfi_data = load_range(mfi_dataset, mfi_var_list, datestrs[0], datestrs[1], load_freq='1MS', interp_freq=cadence) # MFI data is already minutely, it's just on the half-minute so we still have to interp
+if download:
+    logger.info(f"Loading FPI ion data.")
+    fpi_i_data = load_range(fpi_i_dataset, fpi_i_var_list, datestrs[0], datestrs[1], load_freq='1MS', resample_freq=cadence, verbose=True)
+    logger.info(f"Loading FPI electron data.")
+    fpi_e_data = load_range(fpi_e_dataset, fpi_e_var_list, datestrs[0], datestrs[1], load_freq='1MS', resample_freq=cadence)
+    logger.info(f"Loading MEC data.")
+    mec_data = load_range(mec_dataset, mec_var_list, datestrs[0], datestrs[1], load_freq='1MS', resample_freq=cadence)
+    logger.info(f"Loading FGM data.")
+    fgm_data = load_range(fgm_dataset, fgm_var_list, datestrs[0], datestrs[1], load_freq='1D', resample_freq=cadence) # load_freq is shorter here, if longer than ~10D RAM is overloaded. 1D is no slower than 10D
+    logger.info(f"Loading SWE data.")
+    swe_data = load_range(swe_dataset, swe_var_list, datestrs[0], datestrs[1], load_freq='1MS', interp_freq=cadence)
+    logger.info(f"Loading MFI data.")
+    mfi_data = load_range(mfi_dataset, mfi_var_list, datestrs[0], datestrs[1], load_freq='1MS', interp_freq=cadence) # MFI data is already minutely, it's just on the half-minute so we still have to interp
 
-if save_raw:
-    logger.info(f"Saving raw data.")
-    fpi_i_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fpi_i_1min')
-    fpi_e_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fpi_e_1min')
-    mec_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'mec_1min')
-    fgm_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fgm_1min')
-    swe_data.to_hdf(DATAPATH + 'wind/wind_data.h5', key = 'swe_1min')
-    mfi_data.to_hdf(DATAPATH + 'wind/wind_data.h5', key = 'mfi_1min')
+    if save_raw:
+        logger.info(f"Saving raw data.")
+        fpi_i_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fpi_i_1min')
+        fpi_e_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fpi_e_1min')
+        mec_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'mec_1min')
+        fgm_data.to_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fgm_1min')
+        swe_data.to_hdf(DATAPATH + 'wind/wind_data.h5', key = 'swe_1min')
+        mfi_data.to_hdf(DATAPATH + 'wind/wind_data.h5', key = 'mfi_1min')
+else:
+    logger.info(f"Loading raw data.")
+    fpi_i_data = pd.read_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fpi_i_1min')
+    fpi_e_data = pd.read_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fpi_e_1min')
+    mec_data = pd.read_hdf(DATAPATH + 'mms/mms_data.h5', key = 'mec_1min')
+    fgm_data = pd.read_hdf(DATAPATH + 'mms/mms_data.h5', key = 'fgm_1min')
+    swe_data = pd.read_hdf(DATAPATH + 'wind/wind_data.h5', key = 'swe_1min')
+    mfi_data = pd.read_hdf(DATAPATH + 'wind/wind_data.h5', key = 'mfi_1min')
 
 # Load the labeled MMS data from Toy-Edens et al. 2024 https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2024JA032431
 # Downloaded from zenodo.org/records/10491878
@@ -183,13 +193,21 @@ fs_regions['start'] = pd.to_datetime(fs_regions['start'], utc = True)
 fs_regions['stop'] = pd.to_datetime(fs_regions['stop'], utc = True)  # Stops are on the 59th second of the minute so should be inclusive when binning MMS data
 
 # Create a dataframe to put all the data into
-combo_df = pd.DataFrame([])
-combo_df['Epoch'] = pd.date_range(mms_labels['Epoch'].min(), mms_labels['Epoch'].max(), freq = "1min") # Make a time for every minute so gaps can be identified as nans
-suffixes = ['_labels', '_fpi_i', '_fpi_e', '_mec', '_fgm', '_swe', '_mfi']
-for i, dataframe in enumerate([mms_labels, fpi_i_data, fpi_e_data, mec_data, fgm_data, swe_data, mfi_data]):
-    combo_df = combo_df.merge(dataframe, on = 'Epoch', suffixes=('', suffixes[i]), how = 'left')
-    combo_df['interped' + suffixes[i]] = combo_df[dataframe.columns[1]].isna()
-combo_df = combo_df.rename(columns = {'count' : 'count_fpi_i'})
+logger.info(f"Merging raw MMS dataframes.")
+# combo_df = pd.DataFrame([])
+# combo_df['Epoch'] = pd.date_range(mms_labels['Epoch'].min(), mms_labels['Epoch'].max(), freq = "1min") # Make a time for every minute so gaps can be identified as nans
+suffixes = ['_labels', '_fpi_i', '_fpi_e', '_fgm']
+for i, dataframe in enumerate([mms_labels, fpi_i_data, fpi_e_data, fgm_data]):
+    if i == 0:
+        combo_df = dataframe #The first dataframe has nothing to merge into
+    else:
+        combo_df = combo_df.merge(dataframe, on = 'Epoch', suffixes=('', suffixes[i]), how = 'inner') # Here 'inner' because we want all target data to have every parameter and be labeled
+    logger.info(f"Merge {i+1} of {len(suffixes)} complete.")
+# combo_df = combo_df.rename(columns = {'count' : 'count_fpi_i'})
+
+# Add MEC data, but merge left because it's HUGE
+logger.info(f"Merging MEC data into MMS dataframe.")
+combo_df = combo_df.merge(mec_data, on = 'Epoch', suffixes=('', '_mec'), how = 'left')
 
 # Mark entries when MMS is "stable" in a given region
 logger.info(f"Marking stable regions.")
@@ -204,5 +222,18 @@ for region_df in [sw_regions, sh_regions, ms_regions, fs_regions]:
         ] = 1
 
 # Save the combined dataframe to an HDF
-logger.info(f"Saving combined dataframe.")
-combo_df.to_hdf(DATAPATH + 'combined_data.h5', key = '1min_mms_wind')
+logger.info(f"Saving labeled MMS dataframe.")
+combo_df.to_hdf(DATAPATH + 'combined_data.h5', key = 'mms_1min_labeled')
+
+# Prepare the wind input data
+logger.info(f"Preparing Wind dataframe.")
+time_df = pd.DataFrame([])
+time_df['Epoch'] = pd.date_range(mms_labels['Epoch'].min(), mms_labels['Epoch'].max(), freq = "1min") # Make a time for every minute so gaps can be identified as nans, only where we have MMS data
+logger.info(f"Merging SWE and MFI data.")
+wind_df = swe_data.merge(mfi_data, on = 'Epoch', suffixes=('_swe', '_mfi'), how = 'outer') # Here 'outer' to leave gaps in the data so they can be interpolated over
+logger.info(f"Merging notional times and combined data.")
+wind_df = time_df.merge(wind_df, on = 'Epoch', suffixes=('_time', ''), how = 'outer')
+wind_df['interped_mfi'] = wind_df['BGSM_0'].isna()
+wind_df['interped_swe'] = wind_df['Np'].isna()
+logger.info(f"Saving Wind dataframe.")
+wind_df.to_hdf(DATAPATH + 'combined_data.h5', key = 'wind_1min_complete')

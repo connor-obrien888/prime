@@ -22,11 +22,12 @@ class SWDataset(Dataset):
         position_normalizations = None,
         min_time = pd.to_datetime('20150902 00:00:00+0000'), # Earliest MMS timestamp,
         max_time = pd.to_datetime('20250101 00:00:00+0000'), # Latest MMS timestamp,
-        raw_data = None,
+        input_data = None,
         target_data = None,
         position_data = None,
         datastore = "~/data/prime/sw_data.h5",
-        key = "mms_wind_combined",
+        in_key = "wind_1min_complete",
+        tar_key = "mms_1min_labeled",
     ):
         super().__init__()
 
@@ -44,19 +45,20 @@ class SWDataset(Dataset):
         self.min_time = min_time
         self.max_time = max_time
         self.datastore = datastore
-        self.key = key
+        self.in_key = in_key
+        self.tar_key = tar_key
 
-        if raw_data is None: #Load the data
-            self.raw_data = pd.read_hdf(self.datastore, key = self.key, mode = "r")
+        if input_data is None: #Load the data
+            self.input_data = pd.read_hdf(self.datastore, key = self.key, mode = "r")
             #TODO: redo making the input and target data
         else:
-            self.raw_data = raw_data
+            self.input_data = input_data
             self.target_data = target_data
             self.position_data = position_data
-        if (max_time > self.raw_data['Epoch'].max()):
-            logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in raw_data")
-        if (min_time < self.raw_data['Epoch'].min()):
-            logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in raw_data")
+        if (max_time > self.target_data['Epoch'].max()):
+            logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in target_data")
+        if (min_time < self.target_data['Epoch'].min()):
+            logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in target_data")
         self.target_data = self.target_data.loc[
             (self.target_data['Epoch'] <= max_time)&
             (self.target_data['Epoch'] >= min_time), :
@@ -70,11 +72,11 @@ class SWDataset(Dataset):
         else:
             self.target_scaled = self.target_data.loc[:, self.target_features]
         if self.input_normalizations is not None: #Should we do input normalization?
-            self.input_scaled = self.raw_data.loc[:, self.input_features] # Here we use the full dataset so that we can 
+            self.input_scaled = self.input_data.loc[:, self.input_features] # Here we use the full dataset so that we can 
             for feature in self.input_features:
                 self.input_scaled[feature] = (self.input_scaled[feature] - self.input_normalizations[feature][0])/self.input_normalizations[feature][1]
         else:
-            self.input_scaled = self.raw_data.loc[:, self.input_features]
+            self.input_scaled = self.input_data.loc[:, self.input_features]
         if self.interpolate: #Interpolate over nans?
             self.input_scaled = self.input_scaled.interpolate(method='linear')
         if self.position_normalizations is not None: #Should we do target normalization?
@@ -92,26 +94,28 @@ class SWDataset(Dataset):
         # position_arr = np.zeros((len(self.target_data), len(self.position_features)))
         position_list = []
         times_list = []
+        logger.info(f"Segmenting input data.")
         for i, idx in enumerate(self.target_data.index):
-            if np.isnan(self.target_scaled.loc[idx, :].values).any(): # Skip targets that are nans
+            if (np.isnan(self.target_scaled.loc[idx, :].values).any())|(np.isnan(self.position_scaled.loc[idx, :].values).any()): # Skip targets that are nans
                 continue
-            target_time = self.target_data.loc[idx, 'Epoch'] # Used to get correct input window
-            input_mask = (
-                (self.raw_data['Epoch'] > (target_time - pd.Timedelta(self.window, unit = 'minutes') - pd.Timedelta(self.stride, unit = 'minutes'))) &
-                (self.raw_data['Epoch'] <= (target_time - pd.Timedelta(self.stride, unit = 'minutes')))
-            )
-            if ((self.raw_data.loc[input_mask, 'interped_swe'].sum()/self.window < self.interp_frac)& # Do not store 
-                (self.raw_data.loc[input_mask, 'interped_mfi'].sum()/self.window < self.interp_frac)):
-                continue
-            segment = self.input_scaled.loc[input_mask, :]
+            target_time = self.target_data.loc[idx, 'Epoch'].strftime('%Y%m%d %H:%M:%S') # Used to get correct input window
+            # input_mask = (
+            #     (self.input_data['Epoch'] > (target_time - pd.Timedelta(self.window, unit = 'minutes') - pd.Timedelta(self.stride, unit = 'minutes'))) &
+            #     (self.input_data['Epoch'] <= (target_time - pd.Timedelta(self.stride, unit = 'minutes')))
+            # )
+            # if ((self.raw_data.loc[input_mask, 'interped_swe'].sum()/self.window < self.interp_frac)& # Do not store 
+            #     (self.raw_data.loc[input_mask, 'interped_mfi'].sum()/self.window < self.interp_frac)):
+            #     continue
+            segment = self.input_scaled.loc[(idx - self.window - self.stride + 1):(idx - self.stride), :]
             if len(segment) != self.window: #Skip any intervals that have non-full input windows
-                logger.info(f"Non-full interval lower bound {self.raw_data.loc[input_mask, 'Epoch'].min()}, upper bound {self.raw_data.loc[input_mask, 'Epoch'].max()}")
+                logger.info(f"Non-full interval length {len(segment)} lower bound {self.input_data.loc[segment.index, 'Epoch'].min()}, upper bound {self.input_data.loc[segment.index, 'Epoch'].max()}")
+                raise(TypeError(f"Segment wrong size, goofy: {len(segment)}"))
                 continue
             # target_arr[i, :] = self.target_scaled.loc[idx, :].values
             target_list.append(self.target_scaled.loc[idx, :].values)
             times_list.append(target_time)
             # input_arr[i, :, :] = self.input_scaled.loc[input_mask, :]
-            input_list.append(segment)
+            input_list.append(segment.values)
             # position_arr[i, :] = self.position_scaled.loc[idx, :].values
             position_list.append(self.position_scaled.loc[idx, :].values)
 
@@ -155,7 +159,8 @@ class SWDataModule(pl.LightningDataModule):
         batch_size = 32,
         num_workers = 1,
         datastore = "~/data/prime/sw_data.h5",
-        key = "mms_wind_combined",
+        in_key = "wind_1min_complete",
+        tar_key = "mms_1min_labeled",
     ):
         super().__init__()
         self.target_features = target_features # Features model uses as targets
@@ -183,11 +188,13 @@ class SWDataModule(pl.LightningDataModule):
 
         # Load the data and define normalization terms
         self.datastore = datastore # Open the HDF with combined target and input data
-        self.key = key # Key in HDF with combined target and input data
-        self.raw_data = pd.read_hdf(datastore, key = self.key, mode = "r") # Load the HDF of data with no cuts
-        #NOTE: raw_data is essentially input_data. In SWDataset, when scaling the data we downselect to just the input features.
-        self.target_data = self.raw_data.loc[(self.raw_data['modified_named_label'] == self.region), :] # Isolate the desired region/type of solar wind and store as targets (LEAVE ALL FEATURES IN FOR MORE CUTS LATER)
-        self.position_data = self.raw_data.loc[(self.raw_data['modified_named_label'] == self.region), :] # Isolate the desired region/type of solar wind and store as targets (LEAVE ALL FEATURES IN FOR MORE CUTS LATER)
+        self.in_key = in_key # Key in HDF with input data
+        self.tar_key = tar_key # Key in HDF with target data
+        self.raw_in_data = pd.read_hdf(datastore, key = self.in_key, mode = "r") # Load the HDF of data with no cuts
+        self.raw_tar_data = pd.read_hdf(datastore, key = self.tar_key, mode = "r")
+        
+        self.target_data = self.raw_tar_data.loc[(self.raw_tar_data['modified_named_label'] == self.region), :] # Isolate the desired region/type of solar wind and store as targets (LEAVE ALL FEATURES IN FOR MORE CUTS LATER)
+        self.position_data = self.raw_tar_data.loc[(self.raw_tar_data['modified_named_label'] == self.region), :] # Isolate the desired region/type of solar wind and store as targets (LEAVE ALL FEATURES IN FOR MORE CUTS LATER)
         if self.cuts is not None: # Are we cutting the dataset for only stable regions, or other cuts?
             for cut in self.cuts:
                 if cut == 'stability': # Only train on data where MMS is in same region for 15+ minutes
@@ -204,7 +211,7 @@ class SWDataModule(pl.LightningDataModule):
 
         in_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
         for feature in self.input_features:
-            in_norm_tup_list.append((self.raw_data[feature].mean(), self.raw_data[feature].std())) #TODO: change this based on some config (like, the second value could be the IQR)
+            in_norm_tup_list.append((self.raw_in_data[feature].mean(), self.raw_in_data[feature].std())) #TODO: change this based on some config (like, the second value could be the IQR)
         self.input_normalizations = dict(zip(self.input_features, in_norm_tup_list)) # Dictionary of information used to do normalization
 
         pos_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
@@ -259,7 +266,7 @@ class SWDataModule(pl.LightningDataModule):
             position_normalizations = self.position_normalizations,
             min_time = self.trn_bounds[0],
             max_time = self.trn_bounds[1],
-            raw_data = self.raw_data,
+            input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
         )
@@ -280,7 +287,7 @@ class SWDataModule(pl.LightningDataModule):
             position_normalizations = self.position_normalizations,
             min_time = self.val_bounds[0],
             max_time = self.val_bounds[1],
-            raw_data = self.raw_data,
+            input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
         )
@@ -301,7 +308,7 @@ class SWDataModule(pl.LightningDataModule):
             position_normalizations = self.position_normalizations,
             min_time = self.tst_bounds[0],
             max_time = self.tst_bounds[1],
-            raw_data = self.raw_data,
+            input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
         )
