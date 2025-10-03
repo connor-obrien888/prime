@@ -51,10 +51,8 @@ class LinearDecoder(nn.Module):
                     torch.nn.init.zeros_(m.bias)
 
     def forward(self, x, position):
-        batch_size = x.size(1) # Recurrent-like networks in torch return tensors of shape (layer, batch, encoding_dim)
-        # Flatten input while preserving batch dimension
-        if x.dim() > 2:
-            x = x.view(batch_size, -1)
+        batch_size = x.size(0) # Recurrent-like networks in torch return tensors of shape (batch, seq_length, encoding_dim)
+        # NOTE: to select just the features of the last element of the sequence for all batches, use x[:, -1, :]
         pos_encoded = rff(
             position,
             max_encoding=self.pos_encoding_size
@@ -65,7 +63,10 @@ class LinearDecoder(nn.Module):
         if pos_encoded.size(0) != batch_size:
             pos_encoded = pos_encoded.expand(batch_size, -1)
 
-        combined = torch.cat([x, pos_encoded], dim=-1)
+        if x.ndim > 2:
+            combined = torch.cat([x[:,-1,:], pos_encoded], dim=-1)
+        elif x.ndim == 2:
+            combined = torch.cat([x, pos_encoded], dim=-1)
   
         return self.network(combined)
     
@@ -87,6 +88,20 @@ class RecurrentEncoder(nn.Module):
     def forward(self, x):
         return self.network(x)
 
+class TSPassthroughEncoder(nn.Module):
+    def __init__(
+            self,
+            in_dim,
+        ):
+        super().__init__()
+        self.in_dim = in_dim # NOTE: this is the input size of the timeseries inputs
+
+    def forward(self, x):
+        batch_size = x.size(0)
+        # Flatten input while preserving batch dimension
+        if x.dim() > 2:
+            x = x.view(batch_size, -1)
+        return x
 
 def rff(position, max_encoding = 4, include_raw_coordinates=False): # Random Fourier Features for position encoding
     if position.ndim == 1: # If position is 1D, add the extra dimension

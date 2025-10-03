@@ -28,7 +28,7 @@ data:
   region: 'solar wind'
   cadence: '100s'
   interpolate: True
-  window: 200
+  window: 100
   stride: 30
   interp_frac: 0.05
   trn_bounds: ['20151007 12:08:00+0000', '20211217 04:33:00+0000'] # Bounds for SW data (PRE EXTENSION) resulting in 60/20/20 split
@@ -44,7 +44,7 @@ model:
   decoder_hidden_layers: [256, 128, 64]
   encoder_hidden_dim: 256
   encoder_num_layers: 2
-  p_drop: 0.1
+  p_drop: 0
   pos_encoding_size: 8
 
 # Optimization configuration

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from loguru  import logger
 
-from models import LinearDecoder, RecurrentEncoder
+from models import LinearDecoder, RecurrentEncoder, TSPassthroughEncoder
     
 class SWRegressor(pl.LightningModule):
     def __init__(
@@ -78,6 +78,10 @@ class SWRegressor(pl.LightningModule):
                     num_layers = self.encoder_num_layers,
                     p_drop = self.p_drop,
                 )
+            case "linear":
+                self.encoder = TSPassthroughEncoder(
+                    in_dim = self.in_dim,
+                )
             case _:
                 raise ValueError(f"Invalid encoder type {self.encoder_type}")
         
@@ -85,7 +89,7 @@ class SWRegressor(pl.LightningModule):
         match self.decoder_type:
             case "linear":
                 self.decoder = LinearDecoder(
-                    in_dim = self.encoder_hidden_dim * self.encoder_num_layers,
+                    in_dim = self.encoder_hidden_dim,
                     tar_dim = self.tar_dim,
                     pos_dim = self.pos_dim,
                     pos_encoding_size = self.pos_encoding_size,
@@ -96,7 +100,7 @@ class SWRegressor(pl.LightningModule):
                 # This is a special case of linear that outputs two values for each target feature.
                 # NOTE: Compatible with loss = 'crps' ONLY!
                 self.decoder = LinearDecoder(
-                    in_dim = self.encoder_hidden_dim * self.encoder_num_layers,
+                    in_dim = self.encoder_hidden_dim,
                     tar_dim = self.tar_dim * 2,
                     pos_dim = self.pos_dim,
                     pos_encoding_size = self.pos_encoding_size,
@@ -109,10 +113,11 @@ class SWRegressor(pl.LightningModule):
         # Handle the loss type
         match self.loss:
             case "mae":
-                self.loss_fn = lambda outputs, targets: torch.nn.functional.l1_loss(
-                    outputs,
-                    targets,
-                ) 
+                # self.loss_fn = lambda outputs, targets: torch.nn.functional.l1_loss(
+                #     outputs,
+                #     targets,
+                # ) 
+                self.loss_fn = torch.nn.L1Loss()
             case "crps":
                 self.loss_fn = lambda outputs, targets: crps(
                     outputs,
@@ -125,10 +130,13 @@ class SWRegressor(pl.LightningModule):
         self.val_predictions = []
         self.val_targets = []
         self.val_times = []
+
+        # Define an example input pair for generating the model graph
+        self.example_input_array = (torch.rand(50, 100, self.in_dim, device = self.device), torch.rand(50, self.pos_dim, device = self.device)) # (x, position)
     
     def forward(self, x, position):
         out, h = self.encoder.forward(x)
-        y_hat = self.decoder.forward(h, position)
+        y_hat = self.decoder.forward(out, position)
         return y_hat
     
     def predict_step(self, batch, batch_idx):
@@ -156,7 +164,7 @@ class SWRegressor(pl.LightningModule):
             self.trn_mae.update(y_hat, target)
 
         self.log(
-            'train_loss',
+            'Loss/train',
             loss,
             on_step=True,     # Log every step
             on_epoch=True,    # Log at end of epoch
@@ -166,7 +174,7 @@ class SWRegressor(pl.LightningModule):
         )
         # Log current learning rate from optimizer
         lr = self.trainer.optimizers[0].param_groups[0]['lr']
-        self.log('lr', lr, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
+        self.log('Opt/lr', lr, on_epoch=True, prog_bar=False, logger=True, sync_dist=True)
         return loss
     
     def validation_step(self, batch, batch_idx):
@@ -178,12 +186,15 @@ class SWRegressor(pl.LightningModule):
         # Update the metrics
         if self.loss == 'crps':
             self.val_mae.update(y_hat, target)
-        self.log('val_loss', val_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log('Loss/val', val_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
 
         # Store the batches so we can make a 2D joint distribution at epoch end
         self.val_predictions.append(y_hat.cpu())
         self.val_targets.append(target.cpu())
         self.val_times.append(times)
+
+        # Plot the graph on the first validation epoch
+        # self.log_graph()
         
         return val_loss
 
@@ -196,7 +207,7 @@ class SWRegressor(pl.LightningModule):
         # Update the metrics
         if self.loss == 'crps':
             self.tst_mae.update(y_hat, target)
-        self.log('test_loss', test_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log('Loss/test', test_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         
         return {
             "predictions": y_hat,
@@ -208,7 +219,7 @@ class SWRegressor(pl.LightningModule):
     def on_validation_epoch_end(self):
         # Compute and log all accumulated metrics
         if self.loss == 'crps':
-            self.log('val_mae', self.val_mae.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
+            self.log('MAE/val', self.val_mae.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
             # Clear all the metrics
             self.val_mae.reset()
 
@@ -241,7 +252,7 @@ class SWRegressor(pl.LightningModule):
                 linestyle = "--",
                 transform = ax[i].transAxes,
             )
-        self.logger.experiment.add_figure(f"val_jd_epoch{self.current_epoch}", fig)
+        self.logger.experiment.add_figure(f"JD/val_epoch{self.current_epoch}", fig)
 
         # TODO: Plot a holdout event
 
@@ -257,7 +268,7 @@ class SWRegressor(pl.LightningModule):
 
     def on_test_epoch_end(self):
         if self.loss == 'crps':
-            self.log('tst_mae', self.tst_mae.compute(), on_epoch=True, logger=True, sync_dist=True)
+            self.log('MAE/test', self.tst_mae.compute(), on_epoch=True, logger=True, sync_dist=True)
 
     def on_before_optimizer_step(self, optimizer):
         # Compute the 2-norm for each layer
@@ -305,7 +316,7 @@ class SWRegressor(pl.LightningModule):
                 )
                 scheduler_config = {
                     'scheduler': scheduler,
-                    'monitor': 'val_loss',  # Add this required parameter!
+                    'monitor': 'Loss/val',  # Add this required parameter!
                     'interval': 'epoch',
                     'frequency': 1
                 }

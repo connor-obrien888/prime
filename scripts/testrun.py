@@ -64,6 +64,7 @@ def main(config, runname):
     logger = pl.loggers.TensorBoardLogger(
         save_dir = cfg.experiments.trainer.tensorboard_path,
         name = runname,
+        log_graph = True,
     )
 
     trainer = pl.Trainer(
@@ -78,7 +79,6 @@ def main(config, runname):
         # precision='16-true', #Lower the precision to not blow up memory
     )
     trainer.fit(model=model, datamodule=datamodule)
-    logger.log_graph(model)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Single training run of PRIME.")
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--runname",
         type=str,
-        default="testrun",
+        default="graphtest",
         help="Name of this model run.",
     )
     args = parser.parse_args()
