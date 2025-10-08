@@ -23,6 +23,7 @@ class SWRegressor(pl.LightningModule):
             in_dim = 14,
             tar_dim = 1,
             pos_dim = 3,
+            window = 1,
             decoder_type = 'linear',
             encoder_type = 'rnn',
             decoder_hidden_layers = [128],
@@ -50,6 +51,7 @@ class SWRegressor(pl.LightningModule):
         self.in_dim = in_dim
         self.tar_dim = tar_dim
         self.pos_dim = pos_dim
+        self.window = window
         self.encoder_type = encoder_type
         self.decoder_type = decoder_type
         self.decoder_hidden_layers = decoder_hidden_layers
@@ -78,10 +80,12 @@ class SWRegressor(pl.LightningModule):
                     num_layers = self.encoder_num_layers,
                     p_drop = self.p_drop,
                 )
+                decoder_in_dim = self.encoder_hidden_dim
             case "linear":
                 self.encoder = TSPassthroughEncoder(
-                    in_dim = self.in_dim,
+                    in_dim = self.in_dim * self.window,
                 )
+                decoder_in_dim = self.in_dim * self.window
             case _:
                 raise ValueError(f"Invalid encoder type {self.encoder_type}")
         
@@ -89,7 +93,7 @@ class SWRegressor(pl.LightningModule):
         match self.decoder_type:
             case "linear":
                 self.decoder = LinearDecoder(
-                    in_dim = self.encoder_hidden_dim,
+                    in_dim = decoder_in_dim,
                     tar_dim = self.tar_dim,
                     pos_dim = self.pos_dim,
                     pos_encoding_size = self.pos_encoding_size,
@@ -100,7 +104,7 @@ class SWRegressor(pl.LightningModule):
                 # This is a special case of linear that outputs two values for each target feature.
                 # NOTE: Compatible with loss = 'crps' ONLY!
                 self.decoder = LinearDecoder(
-                    in_dim = self.encoder_hidden_dim,
+                    in_dim = decoder_in_dim,
                     tar_dim = self.tar_dim * 2,
                     pos_dim = self.pos_dim,
                     pos_encoding_size = self.pos_encoding_size,
@@ -113,10 +117,6 @@ class SWRegressor(pl.LightningModule):
         # Handle the loss type
         match self.loss:
             case "mae":
-                # self.loss_fn = lambda outputs, targets: torch.nn.functional.l1_loss(
-                #     outputs,
-                #     targets,
-                # ) 
                 self.loss_fn = torch.nn.L1Loss()
             case "crps":
                 self.loss_fn = lambda outputs, targets: crps(
@@ -132,7 +132,7 @@ class SWRegressor(pl.LightningModule):
         self.val_times = []
 
         # Define an example input pair for generating the model graph
-        self.example_input_array = (torch.rand(50, 100, self.in_dim, device = self.device), torch.rand(50, self.pos_dim, device = self.device)) # (x, position)
+        self.example_input_array = (torch.rand(50, self.window, self.in_dim, device = self.device), torch.rand(50, self.pos_dim, device = self.device)) # (x, position)
     
     def forward(self, x, position):
         out, h = self.encoder.forward(x)
@@ -230,6 +230,8 @@ class SWRegressor(pl.LightningModule):
             predictions = predictions[:, ::2]
         fig, ax = plt.subplots(nrows = 1, ncols = self.tar_dim, figsize = (6 * self.tar_dim, 6))
         nbins = 50
+        if self.tar_dim == 1: # In the case of a single target parameter, the Axes object will not be subscriptable
+            ax = [ax] # Increase the dimensions of ax so that the indexing below still works
         for i in range(self.tar_dim):
             im = ax[i].hexbin(
                 targets[:, i],

@@ -22,14 +22,16 @@ experiments:
   #TODO: add tensorboard configuration here
 #Dataset configuration
 data:
-  target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
+  # target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
   input_features: ['Np', 'V_GSE_0', 'V_GSE_1', 'V_GSE_2', 'THERMAL_SPD', 'BGSE_0', 'BGSE_1', 'BGSE_2', 'PGSE_0', 'PGSE_1', 'PGSE_2']
+  target_features: ['mms1_dis_bulkv_gse_fast_0',]
+  # input_features: ['mms1_dis_bulkv_gse_fast_0',]
   position_features: ['r_gse_x', 'r_gse_y', 'r_gse_z']
   region: 'solar wind'
   cadence: '100s'
   interpolate: True
-  window: 100
-  stride: 30
+  window: 200
+  stride: 20
   interp_frac: 0.05
   trn_bounds: ['20151007 12:08:00+0000', '20211217 04:33:00+0000'] # Bounds for SW data (PRE EXTENSION) resulting in 60/20/20 split
   val_bounds: ['20211217 04:34:00+0000', '20221206 11:21:00+0000']
@@ -41,11 +43,11 @@ data:
 model:
   decoder_type: 'linear'
   encoder_type: 'rnn'
-  decoder_hidden_layers: [256, 128, 64]
-  encoder_hidden_dim: 256
+  decoder_hidden_layers: [512, 256, 128, 64]
+  encoder_hidden_dim: 1100
   encoder_num_layers: 2
   p_drop: 0
-  pos_encoding_size: 8
+  pos_encoding_size: 1
 
 # Optimization configuration
 opt:

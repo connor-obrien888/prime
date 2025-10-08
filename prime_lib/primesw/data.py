@@ -99,6 +99,7 @@ class SWDataset(Dataset):
             if (np.isnan(self.target_scaled.loc[idx, :].values).any())|(np.isnan(self.position_scaled.loc[idx, :].values).any()): # Skip targets that are nans
                 continue
             target_time = self.target_data.loc[idx, 'Epoch'].strftime('%Y%m%d %H:%M:%S') # Used to get correct input window
+            input_idx = self.input_data.loc[self.input_data['Epoch'] == self.target_data.loc[idx, 'Epoch'], :].index[0]
             # input_mask = (
             #     (self.input_data['Epoch'] > (target_time - pd.Timedelta(self.window, unit = 'minutes') - pd.Timedelta(self.stride, unit = 'minutes'))) &
             #     (self.input_data['Epoch'] <= (target_time - pd.Timedelta(self.stride, unit = 'minutes')))
@@ -106,7 +107,7 @@ class SWDataset(Dataset):
             # if ((self.raw_data.loc[input_mask, 'interped_swe'].sum()/self.window < self.interp_frac)& # Do not store 
             #     (self.raw_data.loc[input_mask, 'interped_mfi'].sum()/self.window < self.interp_frac)):
             #     continue
-            segment = self.input_scaled.loc[(idx - self.window - self.stride + 1):(idx - self.stride), :]
+            segment = self.input_scaled.loc[(input_idx - self.window - self.stride + 1):(input_idx - self.stride), :]
             if len(segment) != self.window: #Skip any intervals that have non-full input windows
                 logger.info(f"Non-full interval length {len(segment)} lower bound {self.input_data.loc[segment.index, 'Epoch'].min()}, upper bound {self.input_data.loc[segment.index, 'Epoch'].max()}")
                 raise(TypeError(f"Segment wrong size, goofy: {len(segment)}"))

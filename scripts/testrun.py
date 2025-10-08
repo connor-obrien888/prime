@@ -16,6 +16,7 @@ from data import SWDataset, SWDataModule
 from prime_torch import crps, SWRegressor
 
 def main(config, runname):
+    torch.set_float32_matmul_precision('medium' | 'high')
     cfg = omegaconf.OmegaConf.load(
         config
     )
@@ -39,7 +40,7 @@ def main(config, runname):
         in_key = cfg.data.in_key,
         tar_key = cfg.data.tar_key,
     )
-    datamodule.setup()
+    # datamodule.setup() #Since it is called in Trainer below, no need to set up
 
     model = SWRegressor(
         optimizer = cfg.opt.optimizer,
@@ -51,6 +52,7 @@ def main(config, runname):
         in_dim = len(cfg.data.input_features),
         tar_dim = len(cfg.data.target_features),
         pos_dim = len(cfg.data.position_features),
+        window = cfg.data.window,
         decoder_type = cfg.model.decoder_type,
         encoder_type = cfg.model.encoder_type,
         decoder_hidden_layers = cfg.model.decoder_hidden_layers,

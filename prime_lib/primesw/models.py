@@ -101,7 +101,7 @@ class TSPassthroughEncoder(nn.Module):
         # Flatten input while preserving batch dimension
         if x.dim() > 2:
             x = x.view(batch_size, -1)
-        return x
+        return x, None
 
 def rff(position, max_encoding = 4, include_raw_coordinates=False): # Random Fourier Features for position encoding
     if position.ndim == 1: # If position is 1D, add the extra dimension
