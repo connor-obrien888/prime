@@ -122,7 +122,7 @@ class SWRegressor(pl.LightningModule):
                 self.loss_fn = lambda outputs, targets: crps(
                     outputs,
                     targets,
-                )
+                ).mean()
             case _:
                 raise ValueError(f"Invalid loss type {self.loss}")
             
@@ -165,7 +165,7 @@ class SWRegressor(pl.LightningModule):
 
         self.log(
             'Loss/train',
-            loss,
+            loss.mean(),
             on_step=True,     # Log every step
             on_epoch=True,    # Log at end of epoch
             prog_bar=True,    # Show in progress bar
@@ -186,7 +186,7 @@ class SWRegressor(pl.LightningModule):
         # Update the metrics
         if self.loss == 'crps':
             self.val_mae.update(y_hat, target)
-        self.log('Loss/val', val_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log('Loss/val', val_loss.mean(), on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
 
         # Store the batches so we can make a 2D joint distribution at epoch end
         self.val_predictions.append(y_hat.cpu())
@@ -207,7 +207,7 @@ class SWRegressor(pl.LightningModule):
         # Update the metrics
         if self.loss == 'crps':
             self.tst_mae.update(y_hat, target)
-        self.log('Loss/test', test_loss, on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.log('Loss/test', test_loss.mean(), on_step=False, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
         
         return {
             "predictions": y_hat,
@@ -224,10 +224,14 @@ class SWRegressor(pl.LightningModule):
             self.val_mae.reset()
 
         # TODO: Plot the 2D joint distributions on the validation set
-        predictions = torch.cat(self.val_predictions, dim = 0).numpy()
+        val_preds = torch.cat(self.val_predictions, dim = 0).numpy()
         targets = torch.cat(self.val_targets, dim = 0).numpy()
-        if predictions.shape[-1] == (self.tar_dim * 2): # Are we using one that outputs a mean and a standard deviation?
-            predictions = predictions[:, ::2]
+        if val_preds.shape[-1] == (self.tar_dim * 2): # Are we using one that outputs a mean and a standard deviation?
+            predictions = val_preds[:, ::2]
+            logger.info(f"Plotting JD of probabilistic predictions of size {predictions.shape}")
+        else:
+            predictions = val_preds
+            logger.info(f"Plotting JD of deterministic predictions of size {predictions.shape}")
         fig, ax = plt.subplots(nrows = 1, ncols = self.tar_dim, figsize = (6 * self.tar_dim, 6))
         nbins = 50
         if self.tar_dim == 1: # In the case of a single target parameter, the Axes object will not be subscriptable
@@ -347,9 +351,9 @@ def crps(outputs, targets):
     if ((outputs.size(-1)%2)!=0):
         raise ValueError(f"CRPS loss function requires even number of outputs from model.")
     if outputs.dim() < 2: #If passed 1D outputs/targets
-        outputs = outputs.view(1, outputs.shape(0))
+        outputs = outputs.view(1, outputs.shape[0])
     if targets.dim() < 2:
-        targets = targets.view(1, targets.shape(0))
+        targets = targets.view(1, targets.shape[0])
     # This function uses the 1st, 3rd, 5th... neurons in the last layer as the means of the output 
     # Gaussian and the 2nd, 4th, 6th... neurons as the variance of the output Gaussians for each
     # target parameter. See http://www.dl.begellhouse.com/journals/52034eb04b657aea,3ec0b84376cff3d2,1801e97431c5911b.html

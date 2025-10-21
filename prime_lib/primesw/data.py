@@ -12,6 +12,7 @@ class SWDataset(Dataset):
         target_features,
         input_features,
         position_features,
+        interp_flags,
         cadence,
         interpolate = False,
         window = 1,
@@ -34,6 +35,7 @@ class SWDataset(Dataset):
         self.target_features = target_features # Features model uses as targets
         self.input_features = input_features # Features model uses as input
         self.position_features = position_features # Position of the target for encoder
+        self.interp_flags = interp_flags # Keys where input data interpolation flags are stored
         self.cadence = cadence # Cadence of data
         self.interpolate = interpolate
         self.window = window
@@ -100,17 +102,14 @@ class SWDataset(Dataset):
                 continue
             target_time = self.target_data.loc[idx, 'Epoch'].strftime('%Y%m%d %H:%M:%S') # Used to get correct input window
             input_idx = self.input_data.loc[self.input_data['Epoch'] == self.target_data.loc[idx, 'Epoch'], :].index[0]
-            # input_mask = (
-            #     (self.input_data['Epoch'] > (target_time - pd.Timedelta(self.window, unit = 'minutes') - pd.Timedelta(self.stride, unit = 'minutes'))) &
-            #     (self.input_data['Epoch'] <= (target_time - pd.Timedelta(self.stride, unit = 'minutes')))
-            # )
-            # if ((self.raw_data.loc[input_mask, 'interped_swe'].sum()/self.window < self.interp_frac)& # Do not store 
-            #     (self.raw_data.loc[input_mask, 'interped_mfi'].sum()/self.window < self.interp_frac)):
-            #     continue
             segment = self.input_scaled.loc[(input_idx - self.window - self.stride + 1):(input_idx - self.stride), :]
+            interp_arr = self.input_data.loc[(input_idx - self.window - self.stride + 1):(input_idx - self.stride), self.interp_flags]
+            interp_lengths = [np.sum(interp_arr[key]) for key in self.interp_flags]
             if len(segment) != self.window: #Skip any intervals that have non-full input windows
                 logger.info(f"Non-full interval length {len(segment)} lower bound {self.input_data.loc[segment.index, 'Epoch'].min()}, upper bound {self.input_data.loc[segment.index, 'Epoch'].max()}")
-                raise(TypeError(f"Segment wrong size, goofy: {len(segment)}"))
+                # raise(TypeError(f"Segment wrong size, goofy: {len(segment)}"))
+                continue
+            if (np.max(interp_lengths)/len(segment))>interp_frac: # Is more than interp_frac of the input data interpolated?
                 continue
             # target_arr[i, :] = self.target_scaled.loc[idx, :].values
             target_list.append(self.target_scaled.loc[idx, :].values)
@@ -147,6 +146,7 @@ class SWDataModule(pl.LightningDataModule):
         target_features,
         input_features,
         position_features,
+        interp_flags,
         cadence,
         interpolate,
         region,
@@ -167,6 +167,7 @@ class SWDataModule(pl.LightningDataModule):
         self.target_features = target_features # Features model uses as targets
         self.input_features = input_features # Features model uses as input
         self.position_features = position_features # Positions of the targets added to the inputs
+        self.interp_flags = interp_flags # Keys where input data interpolation flags are stored
         self.cadence = cadence # Cadence of data
         self.interpolate = interpolate # Interpolate over nans?
         self.region = region # Region of space trained to (e.g. 'solar wind', 'magnetosheath')
@@ -257,6 +258,7 @@ class SWDataModule(pl.LightningDataModule):
             self.target_features,
             self.input_features,
             self.position_features,
+            self.interp_flags,
             self.cadence,
             interpolate = self.interpolate,
             window = self.window,
@@ -278,6 +280,7 @@ class SWDataModule(pl.LightningDataModule):
             self.target_features,
             self.input_features,
             self.position_features,
+            self.interp_flags,
             self.cadence,
             interpolate = self.interpolate,
             window = self.window,
@@ -299,6 +302,7 @@ class SWDataModule(pl.LightningDataModule):
             self.target_features,
             self.input_features,
             self.position_features,
+            self.interp_flags,
             self.cadence,
             interpolate = self.interpolate,
             window = self.window,

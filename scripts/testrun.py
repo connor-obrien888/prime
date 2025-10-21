@@ -16,7 +16,7 @@ from data import SWDataset, SWDataModule
 from prime_torch import crps, SWRegressor
 
 def main(config, runname):
-    torch.set_float32_matmul_precision('medium' | 'high')
+    torch.set_float32_matmul_precision('medium')
     cfg = omegaconf.OmegaConf.load(
         config
     )
@@ -25,6 +25,7 @@ def main(config, runname):
         target_features = cfg.data.target_features,
         input_features = cfg.data.input_features,
         position_features = cfg.data.position_features,
+        interp_flags = cfg.data.interp_flags,
         region = cfg.data.region,
         cadence = cfg.data.cadence,
         interpolate = cfg.data.interpolate,

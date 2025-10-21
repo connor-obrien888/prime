@@ -27,12 +27,13 @@ data:
   target_features: ['mms1_dis_bulkv_gse_fast_0',]
   # input_features: ['mms1_dis_bulkv_gse_fast_0',]
   position_features: ['r_gse_x', 'r_gse_y', 'r_gse_z']
+  interp_flags: ['interped_mfi', 'interped_swe']
   region: 'solar wind'
   cadence: '100s'
   interpolate: True
   window: 200
   stride: 20
-  interp_frac: 0.05
+  interp_frac: 1
   trn_bounds: ['20151007 12:08:00+0000', '20211217 04:33:00+0000'] # Bounds for SW data (PRE EXTENSION) resulting in 60/20/20 split
   val_bounds: ['20211217 04:34:00+0000', '20221206 11:21:00+0000']
   tst_bounds: ['20221206 11:22:00+0000', '20230601 14:21:00+0000']
@@ -41,7 +42,7 @@ data:
   tar_key: "mms_1min_labeled"
 # Model configuration
 model:
-  decoder_type: 'linear'
+  decoder_type: 'prob_linear'
   encoder_type: 'rnn'
   decoder_hidden_layers: [512, 256, 128, 64]
   encoder_hidden_dim: 1100
@@ -51,7 +52,7 @@ model:
 
 # Optimization configuration
 opt:
-  loss: 'mae'
+  loss: 'crps'
   optimizer: 'adam'
   lr: 1e-3
   lr_scheduler: plateau
