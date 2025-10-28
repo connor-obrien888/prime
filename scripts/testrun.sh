@@ -12,4 +12,4 @@ module list
 
 conda activate pt212gpu_conda
 
-python3 testrun.py --runname=crpstest
+python3 testrun.py --runname=tuner

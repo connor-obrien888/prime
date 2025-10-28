@@ -20,10 +20,13 @@ class SWRegressor(pl.LightningModule):
             patience=3,
             factor=0.5,
             weight_decay = 0,
+            total_iters = 40,
             in_dim = 14,
             tar_dim = 1,
             pos_dim = 3,
             window = 1,
+            stride = 1,
+            interp_frac = 1,
             decoder_type = 'linear',
             encoder_type = 'rnn',
             decoder_hidden_layers = [128],
@@ -43,6 +46,7 @@ class SWRegressor(pl.LightningModule):
         self.optimizer = optimizer
         self.lr = lr
         self.weight_decay = weight_decay
+        self.total_iters = total_iters # Used for certain LR schedulers
         self.lr_scheduler = lr_scheduler
         self.patience = patience
         self.factor = factor
@@ -52,6 +56,8 @@ class SWRegressor(pl.LightningModule):
         self.tar_dim = tar_dim
         self.pos_dim = pos_dim
         self.window = window
+        self.stride = stride # Only included so that it's saved as a hyperparameter
+        self.interp_frac = interp_frac # Same as above
         self.encoder_type = encoder_type
         self.decoder_type = decoder_type
         self.decoder_hidden_layers = decoder_hidden_layers
@@ -228,10 +234,10 @@ class SWRegressor(pl.LightningModule):
         targets = torch.cat(self.val_targets, dim = 0).numpy()
         if val_preds.shape[-1] == (self.tar_dim * 2): # Are we using one that outputs a mean and a standard deviation?
             predictions = val_preds[:, ::2]
-            logger.info(f"Plotting JD of probabilistic predictions of size {predictions.shape}")
+            # logger.info(f"Plotting JD of probabilistic predictions of size {predictions.shape}")
         else:
             predictions = val_preds
-            logger.info(f"Plotting JD of deterministic predictions of size {predictions.shape}")
+            # logger.info(f"Plotting JD of deterministic predictions of size {predictions.shape}")
         fig, ax = plt.subplots(nrows = 1, ncols = self.tar_dim, figsize = (6 * self.tar_dim, 6))
         nbins = 50
         if self.tar_dim == 1: # In the case of a single target parameter, the Axes object will not be subscriptable
@@ -323,6 +329,24 @@ class SWRegressor(pl.LightningModule):
                 scheduler_config = {
                     'scheduler': scheduler,
                     'monitor': 'Loss/val',  # Add this required parameter!
+                    'interval': 'epoch',
+                    'frequency': 1
+                }
+            case "linear":
+                scheduler = torch.optim.lr_scheduler.LinearLR(
+                    optimizer, start_factor=1, end_factor=self.factor, total_iters=self.total_iters
+                )
+                scheduler_config = {
+                    'scheduler': scheduler,
+                    'interval': 'epoch',
+                    'frequency': 1
+                }
+            case "const":
+                scheduler = torch.optim.lr_scheduler.LinearLR(
+                    optimizer, start_factor=1, end_factor=self.factor, total_iters=self.total_iters
+                )
+                scheduler_config = {
+                    'scheduler': scheduler,
                     'interval': 'epoch',
                     'frequency': 1
                 }

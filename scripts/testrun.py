@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import lightning.pytorch as pl
-from lightning.pytorch.callbacks import RichProgressBar, Timer
+from lightning.pytorch.callbacks import RichProgressBar, Timer, LearningRateFinder
 import argparse
 import omegaconf
 
@@ -50,10 +50,13 @@ def main(config, runname):
         patience = cfg.opt.patience,
         factor = cfg.opt.factor,
         weight_decay = cfg.opt.weight_decay,
+        total_iters = cfg.opt.total_iters,
         in_dim = len(cfg.data.input_features),
         tar_dim = len(cfg.data.target_features),
         pos_dim = len(cfg.data.position_features),
         window = cfg.data.window,
+        stride = cfg.data.stride,
+        interp_frac = cfg.data.interp_frac,
         decoder_type = cfg.model.decoder_type,
         encoder_type = cfg.model.encoder_type,
         decoder_hidden_layers = cfg.model.decoder_hidden_layers,
@@ -76,12 +79,20 @@ def main(config, runname):
         callbacks = [
             Timer(), 
             RichProgressBar(),
+            LearningRateFinder(),
             # ModelCheckpoint(),
             ],
         logger = logger,
         # precision='16-true', #Lower the precision to not blow up memory
     )
     trainer.fit(model=model, datamodule=datamodule)
+    # tuner = pl.tuner.tuning.Tuner(trainer)
+    # lr_finder = tuner.lr_find(model, datamodule = datamodule)
+    # lr = lr_finder.suggestion()
+    # print(f"Optimal learning rate: {lr}")
+
+    # batch_size_finder = tuner.scale_batch_size(model, datamodule = datamodule)
+    # print(f"Optimal batch size: {batch_size_finder}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Single training run of PRIME.")
