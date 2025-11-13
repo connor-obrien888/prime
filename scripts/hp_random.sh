@@ -12,4 +12,4 @@ module list
 
 conda activate pt212gpu_conda
 
-python3 testrun.py --runname=modelhp
+python3 hp_random.py --runname=modelhp --N=1

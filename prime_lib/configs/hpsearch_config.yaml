@@ -44,11 +44,14 @@ data:
 model:
   decoder_type: 'prob_linear'
   encoder_type: 'rnn'
-  decoder_hidden_layers: [512, 256, 128, 64]
-  encoder_hidden_dim: 256
-  encoder_num_layers: 2
-  p_drop: 0
-  pos_encoding_size: 1
+  decoder_hidden_layers_1: [512, 256, 128]
+  decoder_hidden_layers_2: [512, 256, 128]
+  decoder_hidden_layers_3: [256, 128, 64]
+  decoder_hidden_layers_4: [256, 128, 64]
+  encoder_hidden_dim: [128, 256, 384]
+  encoder_num_layers: [1, 2, 3]
+  p_drop: [0, 0.25, 0.50]
+  pos_encoding_size: [1, 4, 8, 16]
 
 # Optimization configuration
 opt:

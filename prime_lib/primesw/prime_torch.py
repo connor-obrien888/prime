@@ -24,6 +24,7 @@ class SWRegressor(pl.LightningModule):
             in_dim = 14,
             tar_dim = 1,
             pos_dim = 3,
+            tar_norm = None,
             window = 1,
             stride = 1,
             interp_frac = 1,
@@ -55,6 +56,7 @@ class SWRegressor(pl.LightningModule):
         self.in_dim = in_dim
         self.tar_dim = tar_dim
         self.pos_dim = pos_dim
+        self.tar_norm = tar_norm
         self.window = window
         self.stride = stride # Only included so that it's saved as a hyperparameter
         self.interp_frac = interp_frac # Same as above
@@ -229,7 +231,6 @@ class SWRegressor(pl.LightningModule):
             # Clear all the metrics
             self.val_mae.reset()
 
-        # TODO: Plot the 2D joint distributions on the validation set
         val_preds = torch.cat(self.val_predictions, dim = 0).numpy()
         targets = torch.cat(self.val_targets, dim = 0).numpy()
         if val_preds.shape[-1] == (self.tar_dim * 2): # Are we using one that outputs a mean and a standard deviation?
@@ -242,10 +243,10 @@ class SWRegressor(pl.LightningModule):
         nbins = 50
         if self.tar_dim == 1: # In the case of a single target parameter, the Axes object will not be subscriptable
             ax = [ax] # Increase the dimensions of ax so that the indexing below still works
-        for i in range(self.tar_dim):
+        for i, feature in enumerate(self.tar_norm.keys()):
             im = ax[i].hexbin(
-                targets[:, i],
-                predictions[:, i],
+                (targets[:, i] * self.tar_norm[feature][1]) + self.tar_norm[feature][0],
+                (predictions[:, i] * self.tar_norm[feature][1]) + self.tar_norm[feature][0],
                 gridsize = nbins,
                 norm = LogNorm(1e0, 1e3),
                 cmap = 'inferno', # TODO: make a fun new colormap
@@ -253,17 +254,20 @@ class SWRegressor(pl.LightningModule):
             # ax[i].set_aspect("equal")
             ax[i].set_xlabel(f"Target {i}")
             ax[i].set_ylabel(f"Predcted {i}")
-            ax[i].set_title(f"Feature {i}")
-            x0, x1 = ax[i].get_xlim()
-            y0, y1 = ax[i].get_xlim()
-            bounds = [max(x0, y0), min(x1, y1)]
+            ax[i].set_title(f"{feature}")
+            lims = [
+                np.min([ax[i].get_xlim(), ax[i].get_ylim()]),  # min of both axes
+                np.max([ax[i].get_xlim(), ax[i].get_ylim()]),  # max of both axes
+            ]
             ax[i].plot(
-                [0, 1],
-                [0, 1],
+                lims,
+                lims,
                 color="k",
                 linestyle = "--",
-                transform = ax[i].transAxes,
             )
+            ax[i].set_aspect('equal')
+            ax[i].set_xlim(lims)
+            ax[i].set_ylim(lims)
         self.logger.experiment.add_figure(f"JD/val_epoch{self.current_epoch}", fig)
 
         # TODO: Plot a holdout event
@@ -322,6 +326,15 @@ class SWRegressor(pl.LightningModule):
                     'interval': 'epoch',
                     'frequency': 1
                 }
+            case "cosine_warm":
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                    optimizer, T_0=self.total_iters,
+                )
+                scheduler_config = {
+                    'scheduler': scheduler,
+                    'interval': 'epoch',
+                    'frequency': 1
+                }
             case "plateau":
                 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                     optimizer, factor=self.factor, patience=self.patience,
@@ -342,8 +355,8 @@ class SWRegressor(pl.LightningModule):
                     'frequency': 1
                 }
             case "const":
-                scheduler = torch.optim.lr_scheduler.LinearLR(
-                    optimizer, start_factor=1, end_factor=self.factor, total_iters=self.total_iters
+                scheduler = torch.optim.lr_scheduler.ConstantLR(
+                    optimizer, factor=self.factor, total_iters=self.total_iters
                 )
                 scheduler_config = {
                     'scheduler': scheduler,

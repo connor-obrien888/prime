@@ -1,0 +1,32 @@
+#Dataset configuration
+data:
+  datapath: /glade/u/home/cobrien/data/magnetotail/
+  in_store: wind_data_full.h5 #wind_data_full.h5'
+  tar_store: mms_temperatures_proc_v2.csv
+  in_storekey: wind_full #'wind_full'
+  sample_rate: 100 #Sampling rate of input data in seconds
+  window: 100
+  stride: 0
+  train_frac: 0.6 #These percentages control the dataset split
+  val_frac: 0.2 #The full dataset is split train_frac, val_frac, test_frac in sequence
+  test_frac: 0.2 #TO DO: randomly assign data in chunks
+  in_keys: ['B_xgsm', 'B_ygsm', 'B_zgsm', 'Vi_xgse', 'Vi_ygse', 'Vi_zgse', 'Ni', 'Vth', 'SME', 'SMR', 'R_xgse', 'R_ygse', 'R_zgse', 'r_gsm_x', 'r_gsm_y', 'r_gsm_z', 'tilt_int', 'SYM_H'] #Data keys to include in input dataset
+  tar_keys: ['T_i_over_T_e', ]
+  data_limits: ['2017-05-02 09:00:00+0000', '2021-06-27 00:00:00+0000']
+  tar_sc: mms
+# Model configuration
+model:
+  binary_operators: ["+", "*", "/", "-"]
+  unary_operators: ["exp"]
+  maxsize: 30
+  maxdepth: None
+  populations: 20
+  population_size: 31
+# Optimization configuration
+opt:
+  niterations: 20
+  log_interval: 10
+  log_dir: "/glade/u/home/cobrien/data/srlogs"
+  cluster_manager: 'pbs'
+  parallelism: 'multiprocessing'
+  turbo: False

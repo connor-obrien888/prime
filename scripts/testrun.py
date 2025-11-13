@@ -54,6 +54,7 @@ def main(config, runname):
         in_dim = len(cfg.data.input_features),
         tar_dim = len(cfg.data.target_features),
         pos_dim = len(cfg.data.position_features),
+        tar_norm = datamodule.target_normalizations,
         window = cfg.data.window,
         stride = cfg.data.stride,
         interp_frac = cfg.data.interp_frac,
@@ -79,7 +80,7 @@ def main(config, runname):
         callbacks = [
             Timer(), 
             RichProgressBar(),
-            LearningRateFinder(),
+            # LearningRateFinder(),
             # ModelCheckpoint(),
             ],
         logger = logger,
@@ -93,6 +94,13 @@ def main(config, runname):
 
     # batch_size_finder = tuner.scale_batch_size(model, datamodule = datamodule)
     # print(f"Optimal batch size: {batch_size_finder}")
+
+    predict_raw = model(datamodule.tst_ds.input_data, datamodule.tst_ds.position_data)
+    for idx, feature in enumerate(datamodule.target_features):
+        predict_scaled = (predict_raw[:, idx*2] * datamodule.tst_ds.target_normalizations[feature][1]) + datamodule.tst_ds.target_normalizations[feature][0]
+        obs_scaled = (datamodule.tst_ds.target_data[:, idx] * datamodule.tst_ds.target_normalizations[feature][1]) + datamodule.tst_ds.target_normalizations[feature][0]
+        mae = np.mean(np.abs(predict_scaled.detach().numpy() - obs_scaled.detach().numpy()))
+        print(f"{feature} MAE: {mae}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Single training run of PRIME.")
