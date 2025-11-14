@@ -1,0 +1,6 @@
+,decoder_hidden_layers_1,decoder_hidden_layers_2,decoder_hidden_layers_3,decoder_hidden_layers_4,encoder_hidden_dim,encoder_num_layers,p_drop,pos_encoding_size
+0,0,0,0,0,0,0,1,0
+1,0,0,0,0,0,2,1,2
+2,2,2,1,2,2,0,0,3
+3,2,1,1,0,2,0,1,2
+4,0,2,2,0,2,1,0,0

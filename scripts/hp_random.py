@@ -38,15 +38,15 @@ def run_model(datamodule, config, hp_df, runname):
         decoder_type = config.model.decoder_type,
         encoder_type = config.model.encoder_type,
         decoder_hidden_layers = [
-            config.model.decoder_hidden_layers_1[hp_df['decoder_hidden_layers_1']],
-            config.model.decoder_hidden_layers_2[hp_df['decoder_hidden_layers_2']],
-            config.model.decoder_hidden_layers_3[hp_df['decoder_hidden_layers_3']],
-            config.model.decoder_hidden_layers_4[hp_df['decoder_hidden_layers_4']],
+            config.model.decoder_hidden_layers_1[int(hp_df.loc[0, 'decoder_hidden_layers_1'])],
+            config.model.decoder_hidden_layers_2[int(hp_df.loc[0, 'decoder_hidden_layers_2'])],
+            config.model.decoder_hidden_layers_3[int(hp_df.loc[0, 'decoder_hidden_layers_3'])],
+            config.model.decoder_hidden_layers_4[int(hp_df.loc[0, 'decoder_hidden_layers_4'])],
         ],
-        encoder_hidden_dim = config.model.encoder_hidden_dim[hp_df['encoder_hidden_dim']],
-        encoder_num_layers=config.model.encoder_num_layers[hp_df['encoder_num_layers']],
-        p_drop = config.model.p_drop[hp_df['p_drop']],
-        pos_encoding_size= config.model.pos_encoding_size[hp_df['pos_encoding_size']],
+        encoder_hidden_dim = config.model.encoder_hidden_dim[int(hp_df.loc[0, 'encoder_hidden_dim'])],
+        encoder_num_layers=config.model.encoder_num_layers[int(hp_df.loc[0, 'encoder_num_layers'])],
+        p_drop = config.model.p_drop[int(hp_df.loc[0, 'p_drop'])],
+        pos_encoding_size= config.model.pos_encoding_size[int(hp_df.loc[0, 'pos_encoding_size'])],
         loss=config.opt.loss,
     )
 
@@ -71,22 +71,22 @@ def run_model(datamodule, config, hp_df, runname):
     trainer.fit(model=model, datamodule=datamodule)
     return model
 
-def get_and_log_unique_hp(logfile):
+def get_and_log_unique_hp(config, logfile):
     log = pd.read_csv(logfile, index_col = 0)
     in_log = True
     while in_log:
         in_log = False
-        hp_df = pd.DataFrame()
-        hp_df['decoder_hidden_layers_1'] = [np.random.randint(0, len(cfg.model.decoder_hidden_layers_1))]
-        hp_df['decoder_hidden_layers_2'] = [np.random.randint(0, len(cfg.model.decoder_hidden_layers_2))]
-        hp_df['decoder_hidden_layers_3'] = [np.random.randint(0, len(cfg.model.decoder_hidden_layers_3))]
-        hp_df['decoder_hidden_layers_4'] = [np.random.randint(0, len(cfg.model.decoder_hidden_layers_4))]
-        hp_df['encoder_hidden_dim'] = np.random.randint(0, len(cfg.model.encoder_hidden_dim))
-        hp_df['encoder_num_layers'] = np.random.randint(0, len(cfg.model.encoder_num_layers))
-        hp_df['p_drop'] = np.random.randint(0, len(cfg.model.p_drop))
-        hp_df['pos_encoding_size'] = np.random.randint(0, len(cfg.model.pos_encoding_size))
+        hp_df = pd.DataFrame(columns = ['decoder_hidden_layers_1', 'decoder_hidden_layers_2', 'decoder_hidden_layers_3', 'decoder_hidden_layers_4', 'encoder_hidden_dim', 'encoder_num_layers', 'p_drop', 'pos_encoding_size'], index = [0])
+        hp_df['decoder_hidden_layers_1'] = np.random.randint(0, len(config.model.decoder_hidden_layers_1))
+        hp_df['decoder_hidden_layers_2'] = np.random.randint(0, len(config.model.decoder_hidden_layers_2))
+        hp_df['decoder_hidden_layers_3'] = np.random.randint(0, len(config.model.decoder_hidden_layers_3))
+        hp_df['decoder_hidden_layers_4'] = np.random.randint(0, len(config.model.decoder_hidden_layers_4))
+        hp_df['encoder_hidden_dim'] = np.random.randint(0, len(config.model.encoder_hidden_dim))
+        hp_df['encoder_num_layers'] = np.random.randint(0, len(config.model.encoder_num_layers))
+        hp_df['p_drop'] = np.random.randint(0, len(config.model.p_drop))
+        hp_df['pos_encoding_size'] = np.random.randint(0, len(config.model.pos_encoding_size))
         for idx in log.index:
-            if log[idx] == hp_df[0]:
+            if (log.loc[idx, :] == hp_df.loc[0, :]).all():
                 in_log = True # Continue the loop to generate a new HP set
     log = pd.concat([log, hp_df], ignore_index = True)
     log.to_csv(logfile)
@@ -121,8 +121,8 @@ def main(config, runname, logfile, N):
     )
 
     for i in range(N):
-        hp_df = get_and_log_unique_hp(logfile)
-        run_model(datamodule, config, hp_df, runname)
+        hp_df = get_and_log_unique_hp(cfg, logfile)
+        run_model(datamodule, cfg, hp_df, runname)
 
 
 if __name__ == "__main__":
@@ -147,9 +147,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--N",
-        type=str,
+        type=int,
         default=5,
         help="Number of models to train in the run.",
     )
     args = parser.parse_args()
-    main(args.config, args.runname, args.logfile)
+    main(args.config, args.runname, args.logfile, args.N)

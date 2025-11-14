@@ -87,7 +87,7 @@ class SWDataset(Dataset):
                 self.position_scaled[feature] = (self.position_scaled[feature] - self.position_normalizations[feature][0])/self.position_normalizations[feature][1]
         else:
             self.position_scaled = self.position_data.loc[:, self.position_features]
-        
+
         #Split the input data into windows and get the right targets
         # input_arr = np.zeros((len(self.target_data), self.window, len(self.input_features)))
         input_list = []
