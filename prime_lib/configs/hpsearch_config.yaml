@@ -39,7 +39,7 @@ data:
   tst_bounds: ['20221206 11:22:00+0000', '20230601 14:21:00+0000']
   datastore: "/glade/u/home/cobrien/data/combined_data.h5"
   in_key: "wind_1min_complete"
-  tar_key: "mms_1min_labeled"
+  tar_key: "mms_1min_labeled_indexed"
 # Model configuration
 model:
   decoder_type: 'prob_linear'

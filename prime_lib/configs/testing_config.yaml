@@ -39,16 +39,16 @@ data:
   tst_bounds: ['20221206 11:22:00+0000', '20230601 14:21:00+0000']
   datastore: "/glade/u/home/cobrien/data/combined_data.h5"
   in_key: "wind_1min_complete"
-  tar_key: "mms_1min_labeled"
+  tar_key: "mms_1min_labeled_indexed"
 # Model configuration
-model:
+model: 
   decoder_type: 'prob_linear'
   encoder_type: 'rnn'
-  decoder_hidden_layers: [512, 256, 128, 64]
-  encoder_hidden_dim: 256
-  encoder_num_layers: 2
-  p_drop: 0
-  pos_encoding_size: 1
+  decoder_hidden_layers: [256, 512, 64, 128]
+  encoder_hidden_dim: 384
+  encoder_num_layers: 3
+  p_drop: 0.25
+  pos_encoding_size: 16
 
 # Optimization configuration
 opt:
