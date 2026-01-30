@@ -70,10 +70,15 @@ def cdf_to_df_remote(dataset_name, var_list, start_date, end_date, time_name = '
     dataframe[time_name] = data[1][time_name] # This one is special because it's not in the var_list
     for var in var_list:
         if (var == 'mms1_dis_energyspectr_omni_fast'): 
-            # If you need to handle more than one special variable, you should define a global with all special variables and run the if
+            # TODO: If you need to handle more than one special variable, you should define a global with all special variables and run the if
             # statement with is in that list, then call a function handle_special_variable here that handles all the special cases.
             dataframe['SW_table'] = (data[1]['mms1_dis_energy_fast'][:,0] >= 190) #Solar wind energy-azimuth table starts at ~190-~210 eV
-        if (data[1][var].ndim == 2): # We gotta handle vector data differently because the ending structure must be 2D
+        elif (var.startswith('QF')): # Yeah I know I'm ignoring my note above, I'm having a really awful day
+            # SWE data quality flags start with 'QF", and they're only valid if they're 0, 2, or 130, AND they must be proactively cast to unsigned int
+            print(var)
+            dataframe[var] = data[1][var]
+            dataframe[var] = dataframe[var].astype(np.uint8)
+        elif (data[1][var].ndim == 2): # We gotta handle vector data differently because the ending structure must be 2D
             for i in range(data[1][var].shape[-1]):
                 dataframe[var+'_'+str(i)] = data[1][var][:,i]
         elif (data[1][var].ndim == 1):

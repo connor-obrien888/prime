@@ -12,4 +12,4 @@ module list
 
 conda activate pt212gpu_conda
 
-python3 testrun.py --runname=modelhp
+python3 testrun.py --runname=canon --config=/glade/u/home/cobrien/prime/prime_lib/configs/prime_v2.yaml
