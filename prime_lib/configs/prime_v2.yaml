@@ -19,7 +19,6 @@ experiments:
     gradient_clip_val: 10
     gradient_clip_algorithm: value
     tensorboard_path: "/glade/u/home/cobrien/data/prime/tensorboard_logs"
-  #TODO: add tensorboard configuration here
 #Dataset configuration
 data:
   target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
@@ -40,6 +39,7 @@ data:
   datastore: "/glade/u/home/cobrien/data/combined_data.h5"
   in_key: "wind_1min_complete"
   tar_key: "mms_1min_labeled_indexed"
+  cuts: []
 # Model configuration
 model: 
   decoder_type: 'prob_linear'

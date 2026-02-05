@@ -8,7 +8,7 @@ experiments:
     strategy: auto # multi-gpu: ddp_find_unused_parameters_true, single-gpu: "auto"
     precision: 32 # "16-mixed", "32-true", "32-float", "16-mixed", etc
     profiler: simple # options are 'XLAProfiler' (TPU), 'PyTorchProfiler', warning: PyTorchProfiler only works on cpu/gpu according to docs
-    max_epochs: 200 # number of epochs to train for
+    max_epochs: 50 # number of epochs to train for
     log_every_n_steps: 10
     check_val_every_n_epoch: 1
     detect_anomaly: False
@@ -19,35 +19,38 @@ experiments:
     gradient_clip_val: 10
     gradient_clip_algorithm: value
     tensorboard_path: "/glade/u/home/cobrien/data/prime/tensorboard_logs"
-  #TODO: add tensorboard configuration here
 #Dataset configuration
 data:
-  target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
-  input_features: ['Np', 'V_GSE_0', 'V_GSE_1', 'V_GSE_2', 'THERMAL_SPD', 'BGSE_0', 'BGSE_1', 'BGSE_2', 'PGSE_0', 'PGSE_1', 'PGSE_2']
-  # target_features: ['mms1_dis_bulkv_gse_fast_0','mms1_fgm_b_gse_srvy_l2_2']
-  # input_features: ['mms1_dis_bulkv_gse_fast_0',]
-  position_features: ['r_gse_x', 'r_gse_y', 'r_gse_z']
-  interp_flags: ['interped_mfi', 'interped_swe']
-  region: 'solar wind'
+  target_features: ['N', 'temp'] #, 'Vx', 'Vy', 'Vz', 'Bx', 'By', 'Bz'] # Geotail
+  # target_feature: ['T_i', 'T_e', 'T_i_over_T_e'] # MMS
+  input_features: ['Ni', 'Vi_xgse', 'Vi_ygse', 'Vi_zgse', 'Vth', 'R_xgse', 'R_ygse', 'R_zgse', 'B_xgsm', 'B_ygsm', 'B_zgsm', 'SME', 'SMR', 'tilt']
+  position_features: ['Rx_int', 'Ry_int', 'Rz_int'] # Geotail
+  # position_features: ['r_gsm_x', 'r_gsm_y', 'r_gsm_z'] # MMS
+  interp_flags: ['flag']
+  region: 'magnetotail'
   cadence: '100s'
   interpolate: True
-  window: 150
-  stride: 35
+  window: 200
+  stride: 0
   interp_frac: 0.10
-  trn_bounds: ['20151007 12:08:00+0000', '20211217 04:33:00+0000'] # Bounds for SW data (PRE EXTENSION) resulting in 60/20/20 split
-  val_bounds: ['20211217 04:34:00+0000', '20221206 11:21:00+0000']
-  tst_bounds: ['20221206 11:22:00+0000', '20230601 14:21:00+0000']
-  datastore: "/glade/u/home/cobrien/data/combined_data_ps.h5"
-  in_key: "wind_1min_complete"
-  tar_key: "mms_1min_labeled_indexed"
+  trn_bounds: ['19940216 06:03:00+0000', '20061230 16:19:00+0000'] # Bounds for geotail data resulting in 60/20/20 split
+  val_bounds: ['20061230 16:20:00+0000', '20150822 02:54:00+0000']
+  tst_bounds: ['20150822 02:55:00+0000', '20221125 19:51:00+0000']
+  # trn_bounds: ['20170502 09:41:00+0000', '20180922 11:56:00+0000'] # Bounds for MMS data resulting in 60/20/20 split
+  # val_bounds: ['20180922 11:58:00+0000', '20190912 23:33:00+0000']
+  # tst_bounds: ['20190912 23:34:00+0000', '20210626 23:59:00+0000']
+  datastore: "/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5"
+  in_key: "wind_full"
+  tar_key: "geotail_stricthighdensity_100s" # 'mms_temperatures_proc_v2_100s'
+  cuts: []
 # Model configuration
 model: 
   decoder_type: 'prob_linear'
   encoder_type: 'rnn'
-  decoder_hidden_layers: [256, 256, 128, 64]
-  encoder_hidden_dim: 256
+  decoder_hidden_layers: [128, 64]
+  encoder_hidden_dim: 128
   encoder_num_layers: 1
-  p_drop: 0.0
+  p_drop: 0.2
   pos_encoding_size: 4
 
 # Optimization configuration
