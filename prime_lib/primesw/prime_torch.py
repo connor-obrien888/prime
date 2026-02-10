@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from loguru  import logger
+import warnings
 
 from models import LinearDecoder, RecurrentEncoder, TSPassthroughEncoder
     
@@ -24,7 +25,9 @@ class SWRegressor(pl.LightningModule):
             in_dim = 14,
             tar_dim = 1,
             pos_dim = 3,
+            in_norm = None,
             tar_norm = None,
+            pos_norm = None,
             window = 1,
             stride = 1,
             interp_frac = 1,
@@ -56,7 +59,9 @@ class SWRegressor(pl.LightningModule):
         self.in_dim = in_dim
         self.tar_dim = tar_dim
         self.pos_dim = pos_dim
+        self.in_norm = in_norm
         self.tar_norm = tar_norm
+        self.pos_norm = pos_norm
         self.window = window
         self.stride = stride # Only included so that it's saved as a hyperparameter
         self.interp_frac = interp_frac # Same as above
@@ -146,6 +151,46 @@ class SWRegressor(pl.LightningModule):
         out, h = self.encoder.forward(x)
         y_hat = self.decoder.forward(out, position)
         return y_hat
+
+    def predict(self, timeseries, position): # User-facing prediction step that scales data up and down automatically (human unit in, human unit out
+        in_scaled = timeseries.loc[:, self.in_norm.keys()].copy() # Get just the keys used for prediction
+        for feature in self.in_norm.keys(): # Scale each input feature DOWN
+            in_scaled[feature] = (in_scaled[feature] - self.in_norm[feature][0])/self.in_norm[feature][1]
+
+        # Turn in_scaled into a numpy array of the correct shape
+        in_arr = np.zeros((len(position) - self.window, self.window, len(self.in_norm.keys())))
+        for i, idx in enumerate(in_scaled.index):
+            if i < self.window:
+                continue
+            in_arr[i - self.window, :, :] = in_scaled.loc[(idx - self.window - self.stride):(idx - self.stride - 1), :]
+
+        pos_scaled = position.iloc[self.window:].loc[:, self.pos_norm.keys()].copy() # Get just the position elements
+        for feature in self.pos_norm.keys(): # Scale each position DOWN
+            pos_scaled[feature] = (pos_scaled[feature] - self.pos_norm[feature][0])/self.pos_norm[feature][1]
+        
+        # Tensor-ify the inputs from pandas dataframes
+        in_tensor = torch.from_numpy(in_arr.astype(np.float32)).to(self.device)
+        pos_tensor = torch.from_numpy(pos_scaled.to_numpy().astype(np.float32)).to(self.device)
+
+        y_hat = self.forward(in_tensor, pos_tensor) # Run an actual forward pass
+        y_hat = y_hat.detach().cpu().numpy()
+
+        # Try to initialize the return dataframe
+        try:
+            tar_scaled = pd.DataFrame(timeseries['Epoch'].iloc[self.window:] + pd.Timedelta(seconds = self.stride * 100), columns = ['Epoch'])
+        except KeyError: # If there is no 'Epoch' in the supplied dataframe
+            warnings.warn('timeseries DataFrame does not have Epoch key, no time data will be returned')
+            tar_scaled = pd.DataFrame([], index = timeseries.index[self.window:])
+        
+        if y_hat.shape[1] == 2*len(self.tar_norm.keys()): # If the output is means + stdevs
+            for i, feature in enumerate(self.tar_norm.keys()):
+                tar_scaled[feature] = (y_hat[:, i*2] * self.tar_norm[feature][1]) + self.tar_norm[feature][0]
+                tar_scaled[feature + '_std'] = ((y_hat[:, i*2] + y_hat[:, i*2 + 1]) * self.tar_norm[feature][1]) + self.tar_norm[feature][0] - tar_scaled[feature]
+        else:
+            for i, feature in enumerate(self.tar_norm.keys()):
+                tar_scaled[feature] = (y_hat[:, i] * self.tar_norm[feature][1]) + self.tar_norm[feature][0]
+        
+        return tar_scaled
     
     def predict_step(self, batch, batch_idx):
         timeseries, position, target, times = batch

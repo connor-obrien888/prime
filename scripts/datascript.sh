@@ -1,4 +1,4 @@
-#PBS -N psdata
+#PBS -N pssdata
 #PBS -A UBUB0018
 #PBS -q main
 #PBS -j oe

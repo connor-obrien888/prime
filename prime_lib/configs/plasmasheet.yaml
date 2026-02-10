@@ -8,7 +8,7 @@ experiments:
     strategy: auto # multi-gpu: ddp_find_unused_parameters_true, single-gpu: "auto"
     precision: 32 # "16-mixed", "32-true", "32-float", "16-mixed", etc
     profiler: simple # options are 'XLAProfiler' (TPU), 'PyTorchProfiler', warning: PyTorchProfiler only works on cpu/gpu according to docs
-    max_epochs: 50 # number of epochs to train for
+    max_epochs: 100 # number of epochs to train for
     log_every_n_steps: 10
     check_val_every_n_epoch: 1
     detect_anomaly: False
@@ -33,23 +33,26 @@ data:
   window: 200
   stride: 0
   interp_frac: 0.10
-  trn_bounds: ['19940216 06:03:00+0000', '20061230 16:19:00+0000'] # Bounds for geotail data resulting in 60/20/20 split
-  val_bounds: ['20061230 16:20:00+0000', '20150822 02:54:00+0000']
-  tst_bounds: ['20150822 02:55:00+0000', '20221125 19:51:00+0000']
+  # trn_bounds: ['19940216 06:03:00+0000', '20061230 16:19:00+0000'] # Bounds for geotail data resulting in 60/20/20 split
+  # val_bounds: ['20061230 16:20:00+0000', '20150822 02:54:00+0000']
+  # tst_bounds: ['20150822 02:55:00+0000', '20221125 19:51:00+0000']
+  trn_bounds: ['1994-11-30 18:00:00+0000', '2005-01-01 00:00:00+0000'] # Bounds for geotail data with the same test set as TM03
+  val_bounds: ['2010-01-01 00:00:00+0000', '2022-11-10 00:00:00+0000']
+  tst_bounds: ['2005-01-01 00:00:00+0000', '2010-01-01 00:00:00+0000']
   # trn_bounds: ['20170502 09:41:00+0000', '20180922 11:56:00+0000'] # Bounds for MMS data resulting in 60/20/20 split
   # val_bounds: ['20180922 11:58:00+0000', '20190912 23:33:00+0000']
   # tst_bounds: ['20190912 23:34:00+0000', '20210626 23:59:00+0000']
   datastore: "/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5"
   in_key: "wind_full"
   tar_key: "geotail_stricthighdensity_100s" # 'mms_temperatures_proc_v2_100s'
-  cuts: []
+  cuts: ['density_despike_10']
 # Model configuration
 model: 
   decoder_type: 'prob_linear'
   encoder_type: 'rnn'
-  decoder_hidden_layers: [128, 64]
+  decoder_hidden_layers: [128, 128, 64]
   encoder_hidden_dim: 128
-  encoder_num_layers: 1
+  encoder_num_layers: 2
   p_drop: 0.2
   pos_encoding_size: 4
 

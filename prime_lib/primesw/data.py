@@ -101,7 +101,7 @@ class SWDataset(Dataset):
             if (np.isnan(self.target_scaled.loc[idx, :].values).any())|(np.isnan(self.position_scaled.loc[idx, :].values).any())|(np.isnan(self.target_data.loc[idx, 'input_idx'])): # Skip targets that are nans
                 continue
             target_time = self.target_data.loc[idx, 'Epoch'].strftime('%Y%m%d %H:%M:%S') # Used to get correct input window
-            input_idx = self.target_data.loc[idx, 'input_idx'] #self.input_data.loc[self.input_data['Epoch'] == self.target_data.loc[idx, 'Epoch'], :].index[0]
+            input_idx = self.target_data.loc[idx, 'input_idx'] # Precomputed version of self.input_data.loc[self.input_data['Epoch'] == self.target_data.loc[idx, 'Epoch'], :].index[0]
             segment = self.input_scaled.loc[(input_idx - self.window - self.stride + 1):(input_idx - self.stride), :]
             interp_arr = self.input_data.loc[(input_idx - self.window - self.stride + 1):(input_idx - self.stride), self.interp_flags]
             interp_lengths = [np.sum(interp_arr[key]) for key in self.interp_flags]
@@ -200,11 +200,18 @@ class SWDataModule(pl.LightningDataModule):
         if self.cuts is not None: # Are we cutting the dataset for only stable regions, or other cuts?
             for cut in self.cuts:
                 if cut == 'stability': # Only train on data where MMS is in same region for 15+ minutes
-                    self.target_data = self.target_data[self.target_data['stable'] == 1, :]
-                    self.position_data = self.position_data[self.position_data['stable'] == 1, :]
+                    logger.info(f"Dataset cut {cut}")
+                    self.target_data = self.target_data.loc[self.target_data['stable'] == 1, :]
+                    self.position_data = self.position_data.loc[self.position_data['stable'] == 1, :]
                 if cut == 'solar wind table': # Only use data with the solar wind energy-azimuth table
-                    self.target_data = self.target_data[self.target_data['SW_table'] == 1, :]
-                    self.position_data = self.position_data[self.position_data['SW_table'] == 1, :]
+                    logger.info(f"Dataset cut {cut}")
+                    self.target_data = self.target_data.loc[self.target_data['SW_table'] == 1, :]
+                    self.position_data = self.position_data.loc[self.position_data['SW_table'] == 1, :]
+                if cut.startswith('density_despike'): # Developed to remove density spikes (>20cm-3) in Geotail data.
+                    logger.info(f"Dataset cut {cut}")
+                    threshold = int(cut.split('_')[-1])
+                    self.target_data = self.target_data.loc[self.target_data['N'] <= 20, :]
+                    self.position_data = self.position_data.loc[self.position_data['N'] <= 20, :]
 
         tar_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
         for feature in self.target_features:

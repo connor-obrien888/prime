@@ -85,7 +85,7 @@ class RecurrentEncoder(nn.Module):
         self.p_drop = p_drop
         self.network = nn.RNN(in_dim, encoding_size, num_layers, batch_first = True, dropout = p_drop, bidirectional = bidirectional)
 
-    def forward(self, x):
+    def forward(self, x): # NOTE: x must have shape (batch, sequence, feature)
         return self.network(x)
 
 class TSPassthroughEncoder(nn.Module):
@@ -108,7 +108,7 @@ def rff(position, max_encoding = 4, include_raw_coordinates=False): # Random Fou
         position = position.unsqueeze(0)
     powers = 2.0 ** torch.arange(max_encoding + 1, device=position.device, dtype=position.dtype) # Vector of powers of two up to max_encoding
     scaled_pos = position.unsqueeze(-1) * powers # NOTE: position should still be normed prior to this step. 'scaled' refers to the powers of two
-    scaled_pos = scaled_pos.view(position.size(0), -1)
+    scaled_pos = scaled_pos.reshape(position.size(0), -1)
     cos_vec = torch.cos(scaled_pos) #RFF Cosine terms
     sin_vec = torch.sin(scaled_pos) #RFF Sine terms
     concat = torch.cat([cos_vec, sin_vec], dim=-1) # Add all RFF terms together
