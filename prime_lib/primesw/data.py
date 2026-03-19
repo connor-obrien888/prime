@@ -162,6 +162,7 @@ class SWDataModule(pl.LightningDataModule):
         datastore = "~/data/prime/sw_data.h5",
         in_key = "wind_1min_complete",
         tar_key = "mms_1min_labeled",
+        scaler_type = 'STD',
     ):
         super().__init__()
         self.target_features = target_features # Features model uses as targets
@@ -174,6 +175,7 @@ class SWDataModule(pl.LightningDataModule):
         self.cuts = cuts # How to cut data (e.g. stability, solar wind table)
         self.batch_size = batch_size # Training batch size
         self.num_workers = num_workers # Number of workers for loading data
+        self.scaler_type = scaler_type # Type of scaling to apply to input and target data
 
         if window is not None:
             self.window = window
@@ -207,25 +209,37 @@ class SWDataModule(pl.LightningDataModule):
                     logger.info(f"Dataset cut {cut}")
                     self.target_data = self.target_data.loc[self.target_data['SW_table'] == 1, :]
                     self.position_data = self.position_data.loc[self.position_data['SW_table'] == 1, :]
-                if cut.startswith('density_despike'): # Developed to remove density spikes (>20cm-3) in Geotail data.
+                if cut.startswith('density_despike'): # Developed to remove density spikes (>Ncm-3 for density_despike_N) in Geotail data.
                     logger.info(f"Dataset cut {cut}")
                     threshold = int(cut.split('_')[-1])
-                    self.target_data = self.target_data.loc[self.target_data['N'] <= 20, :]
-                    self.position_data = self.position_data.loc[self.position_data['N'] <= 20, :]
+                    self.target_data = self.target_data.loc[self.target_data['N'] <= threshold, :]
+                    self.position_data = self.position_data.loc[self.position_data['N'] <= threshold, :]
 
-        tar_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
+        tar_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std) or (mean, iqr)
         for feature in self.target_features:
-            tar_norm_tup_list.append((self.target_data[feature].mean(), self.target_data[feature].std())) #TODO: change this based on some config (like, the second value could be the IQR)
+            if self.scaler_type == 'STD':
+                tar_norm_tup_list.append((self.target_data[feature].mean(), self.target_data[feature].std()))
+            if self.scaler_type == 'IQR':
+                tar_norm_tup_list.append((np.nanpercentile(self.target_data[feature],50), # Median
+                                          np.nanpercentile(self.target_data[feature], 75) - np.nanpercentile(self.target_data[feature], 25))) # Interquartile range
         self.target_normalizations = dict(zip(self.target_features, tar_norm_tup_list)) # Dictionary of information used to do normalization
 
-        in_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
+        in_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std) or (mean, iqr)
         for feature in self.input_features:
-            in_norm_tup_list.append((self.raw_in_data[feature].mean(), self.raw_in_data[feature].std())) #TODO: change this based on some config (like, the second value could be the IQR)
+            if self.scaler_type == 'STD':
+                in_norm_tup_list.append((self.raw_in_data[feature].mean(), self.raw_in_data[feature].std()))
+            if self.scaler_type == 'IQR':
+                in_norm_tup_list.append((np.nanpercentile(self.raw_in_data[feature],50), # Median
+                                         np.nanpercentile(self.raw_in_data[feature], 75) - np.nanpercentile(self.raw_in_data[feature], 25))) # Interquartile range
         self.input_normalizations = dict(zip(self.input_features, in_norm_tup_list)) # Dictionary of information used to do normalization
 
-        pos_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
+        pos_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std) or (mean, iqr)
         for feature in self.position_features: #For the purposes of normalization, the position features count as inputs
-            pos_norm_tup_list.append((self.position_data[feature].mean(), self.position_data[feature].std()))
+            if self.scaler_type == 'STD':
+                pos_norm_tup_list.append((self.position_data[feature].mean(), self.position_data[feature].std()))
+            if self.scaler_type == 'IQR':
+                pos_norm_tup_list.append((np.nanpercentile(self.position_data[feature],50), # Median
+                                          np.nanpercentile(self.position_data[feature], 75) - np.nanpercentile(self.position_data[feature], 25))) # Interquartile range
         self.position_normalizations = dict(zip(self.position_features, pos_norm_tup_list)) # Dictionary of information used to do normalization
         
         # Bounds of train/test/validation sets

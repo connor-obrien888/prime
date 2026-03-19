@@ -41,6 +41,7 @@ def main(config, runname):
         datastore = cfg.data.datastore,
         in_key = cfg.data.in_key,
         tar_key = cfg.data.tar_key,
+        scaler_type = cfg.data.scaler_type,
     )
     # datamodule.setup() #Since it is called in Trainer below, no need to set up
 

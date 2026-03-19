@@ -8,7 +8,7 @@ experiments:
     strategy: auto # multi-gpu: ddp_find_unused_parameters_true, single-gpu: "auto"
     precision: 32 # "16-mixed", "32-true", "32-float", "16-mixed", etc
     profiler: simple # options are 'XLAProfiler' (TPU), 'PyTorchProfiler', warning: PyTorchProfiler only works on cpu/gpu according to docs
-    max_epochs: 100 # number of epochs to train for
+    max_epochs: 300 # number of epochs to train for
     log_every_n_steps: 10
     check_val_every_n_epoch: 1
     detect_anomaly: False
@@ -21,6 +21,7 @@ experiments:
     tensorboard_path: "/glade/u/home/cobrien/data/prime/tensorboard_logs"
 #Dataset configuration
 data:
+  scaler_type: 'IQR' # Scaler to use for input and target data. Options: interquartile range (IQR), standard deviation (STD), minmax (MINMAX, not implemented)
   target_features: ['N', 'temp'] #, 'Vx', 'Vy', 'Vz', 'Bx', 'By', 'Bz'] # Geotail
   # target_feature: ['T_i', 'T_e', 'T_i_over_T_e'] # MMS
   input_features: ['Ni', 'Vi_xgse', 'Vi_ygse', 'Vi_zgse', 'Vth', 'R_xgse', 'R_ygse', 'R_zgse', 'B_xgsm', 'B_ygsm', 'B_zgsm', 'SME', 'SMR', 'tilt']
@@ -45,13 +46,13 @@ data:
   datastore: "/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5"
   in_key: "wind_full"
   tar_key: "geotail_stricthighdensity_100s" # 'mms_temperatures_proc_v2_100s'
-  cuts: ['density_despike_10']
+  cuts: [] # ['density_despike_20']
 # Model configuration
 model: 
   decoder_type: 'prob_linear'
   encoder_type: 'rnn'
-  decoder_hidden_layers: [128, 128, 64]
-  encoder_hidden_dim: 128
+  decoder_hidden_layers: [256, 128, 64]
+  encoder_hidden_dim: 256
   encoder_num_layers: 2
   p_drop: 0.2
   pos_encoding_size: 4
@@ -63,7 +64,7 @@ opt:
   lr: 1e-5
   lr_scheduler: const
   patience: 10
-  factor: 0.5
+  factor: 1
   weight_decay: 0
   total_iters: 40 # Used for some LR schedulers (e.g. linear)
   batch_size: 4096 # Optimal batch size for one Derecho GPU

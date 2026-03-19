@@ -5,55 +5,55 @@ from loguru  import logger
 logger.info(f"Loading input data.")
 wind_data = pd.read_hdf('/glade/u/home/cobrien/data/magnetotail/wind_data_full.h5', key = 'wind_full')
 
-logger.info(f"Loading Geotail strict data.")
-geotail_strict = pd.read_csv('/glade/u/home/cobrien/data/magnetotail/geotail_strict.csv', index_col=0)
-geotail_strict['Epoch'] = pd.to_datetime(geotail_strict['datetime'], utc = True, format = 'mixed')
-geotail_strict['modified_named_label'] = 'magnetotail'
+# logger.info(f"Loading Geotail strict data.")
+# geotail_strict = pd.read_csv('/glade/u/home/cobrien/data/magnetotail/geotail_strict.csv', index_col=0)
+# geotail_strict['Epoch'] = pd.to_datetime(geotail_strict['datetime'], utc = True, format = 'mixed')
+# geotail_strict['modified_named_label'] = 'magnetotail'
 
-logger.info(f"Resampling Geotail strict data.")
-geotail_strict_resample = pd.DataFrame([], columns = geotail_strict.columns)
-for key in geotail_strict.columns:
-    if key == 'Epoch':
-        geotail_strict_resample[key] = geotail_strict.loc[:, ['Epoch']].resample('100s', on='Epoch').first().index
-    elif geotail_strict[key].dtype == 'O': # Object columns must use .first()
-        geotail_strict_resample[key] = geotail_strict.loc[:, ['Epoch', key]].resample('100s', on='Epoch').first()[key]
-    else: # Float/int/datetime columns must use .mean()
-        geotail_strict_resample[key] = geotail_strict.loc[:, ['Epoch', key]].resample('100s', on='Epoch').mean()[key]
-geotail_strict_resample = geotail_strict_resample.dropna() # Empty times are nans
-geotail_strict_resample = geotail_strict_resample.reset_index(drop = True) # Scrub the time index the resampling creates
-
-logger.info(f"Indexing Geotail strict data.")
-geotail_strict_resample['input_idx'] = np.nan
-for idx, time in enumerate(geotail_strict_resample['Epoch']):
-    geotail_strict_resample.loc[idx, 'input_idx'] = wind_data[(wind_data['Epoch'] == time)].index[0]
-
-logger.info(f"Saving Geotail strict data.")
-geotail_strict_resample.to_hdf('/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5', key = 'geotail_strict_100s')
-
-# logger.info(f"Loading Geotail flexible data.")
-# geotail_flexible = pd.read_csv('/glade/u/home/cobrien/data/magnetotail/geotail_flexible.csv', index_col=0)
-# geotail_flexible['Epoch'] = pd.to_datetime(geotail_flexible['datetime'], utc = True, format = 'mixed')
-# geotail_flexible['modified_named_label'] = 'magnetotail'
-
-# logger.info(f"Resampling Geotail flexible data.")
-# geotail_flexible_resample = pd.DataFrame([], columns = geotail_flexible.columns)
-# for key in geotail_flexible.columns:
+# logger.info(f"Resampling Geotail strict data.")
+# geotail_strict_resample = pd.DataFrame([], columns = geotail_strict.columns)
+# for key in geotail_strict.columns:
 #     if key == 'Epoch':
-#         geotail_flexible_resample[key] = geotail_flexible.loc[:, ['Epoch']].resample('100s', on='Epoch').first().index
-#     elif geotail_flexible[key].dtype == 'O': # Object columns must use .first()
-#         geotail_flexible_resample[key] = geotail_flexible.loc[:, ['Epoch', key]].resample('100s', on='Epoch').first()[key]
+#         geotail_strict_resample[key] = geotail_strict.loc[:, ['Epoch']].resample('100s', on='Epoch').first().index
+#     elif geotail_strict[key].dtype == 'O': # Object columns must use .first()
+#         geotail_strict_resample[key] = geotail_strict.loc[:, ['Epoch', key]].resample('100s', on='Epoch').first()[key]
 #     else: # Float/int/datetime columns must use .mean()
-#         geotail_flexible_resample[key] = geotail_flexible.loc[:, ['Epoch', key]].resample('100s', on='Epoch').mean()[key]
-# geotail_flexible_resample = geotail_flexible_resample.dropna() # Empty times are nans
-# geotail_flexible_resample = geotail_flexible_resample.reset_index(drop = True) # Scrub the time index the resampling creates
+#         geotail_strict_resample[key] = geotail_strict.loc[:, ['Epoch', key]].resample('100s', on='Epoch').mean()[key]
+# geotail_strict_resample = geotail_strict_resample.dropna() # Empty times are nans
+# geotail_strict_resample = geotail_strict_resample.reset_index(drop = True) # Scrub the time index the resampling creates
 
-# logger.info(f"Indexing Geotail flexible data.")
-# geotail_flexible_resample['input_idx'] = np.nan
-# for idx, time in enumerate(geotail_flexible_resample['Epoch']):
-#     geotail_flexible_resample.loc[idx, 'input_idx'] = wind_data[(wind_data['Epoch'] == time)].index[0]
+# logger.info(f"Indexing Geotail strict data.")
+# geotail_strict_resample['input_idx'] = np.nan
+# for idx, time in enumerate(geotail_strict_resample['Epoch']):
+#     geotail_strict_resample.loc[idx, 'input_idx'] = wind_data[(wind_data['Epoch'] == time)].index[0]
 
-# logger.info(f"Saving Geotail flexible data.")
-# geotail_flexible_resample.to_hdf('/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5', key = 'geotail_flexible_100s')
+# logger.info(f"Saving Geotail strict data.")
+# geotail_strict_resample.to_hdf('/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5', key = 'geotail_strict_100s')
+
+logger.info(f"Loading Geotail flexible data.")
+geotail_flexible = pd.read_csv('/glade/u/home/cobrien/data/magnetotail/geotail_flexible.csv', index_col=0)
+geotail_flexible['Epoch'] = pd.to_datetime(geotail_flexible['datetime'], utc = True, format = 'mixed')
+geotail_flexible['modified_named_label'] = 'magnetotail'
+
+logger.info(f"Resampling Geotail flexible data.")
+geotail_flexible_resample = pd.DataFrame([], columns = geotail_flexible.columns)
+for key in geotail_flexible.columns:
+    if key == 'Epoch':
+        geotail_flexible_resample[key] = geotail_flexible.loc[:, ['Epoch']].resample('100s', on='Epoch').first().index
+    elif geotail_flexible[key].dtype == 'O': # Object columns must use .first()
+        geotail_flexible_resample[key] = geotail_flexible.loc[:, ['Epoch', key]].resample('100s', on='Epoch').first()[key]
+    else: # Float/int/datetime columns must use .mean()
+        geotail_flexible_resample[key] = geotail_flexible.loc[:, ['Epoch', key]].resample('100s', on='Epoch').mean()[key]
+geotail_flexible_resample = geotail_flexible_resample.dropna() # Empty times are nans
+geotail_flexible_resample = geotail_flexible_resample.reset_index(drop = True) # Scrub the time index the resampling creates
+
+logger.info(f"Indexing Geotail flexible data.")
+geotail_flexible_resample['input_idx'] = np.nan
+for idx, time in enumerate(geotail_flexible_resample['Epoch']):
+    geotail_flexible_resample.loc[idx, 'input_idx'] = wind_data[(wind_data['Epoch'] == time)].index[0]
+
+logger.info(f"Saving Geotail flexible data.")
+geotail_flexible_resample.to_hdf('/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5', key = 'geotail_flexible_100s')
 
 # logger.info(f"Loading Geotail strict + high density data.")
 # geotail = pd.read_csv('/glade/u/home/cobrien/data/magnetotail/geotail_stricthighdensity.csv', index_col=0)

@@ -152,7 +152,7 @@ class SWRegressor(pl.LightningModule):
         y_hat = self.decoder.forward(out, position)
         return y_hat
 
-    def predict(self, timeseries, position): # User-facing prediction step that scales data up and down automatically (human unit in, human unit out
+    def predict(self, timeseries, position): # User-facing prediction step that scales data up and down automatically (human unit in, human unit out)
         in_scaled = timeseries.loc[:, self.in_norm.keys()].copy() # Get just the keys used for prediction
         for feature in self.in_norm.keys(): # Scale each input feature DOWN
             in_scaled[feature] = (in_scaled[feature] - self.in_norm[feature][0])/self.in_norm[feature][1]
