@@ -37,6 +37,9 @@ data:
   # trn_bounds: ['19940216 06:03:00+0000', '20061230 16:19:00+0000'] # Bounds for geotail data resulting in 60/20/20 split
   # val_bounds: ['20061230 16:20:00+0000', '20150822 02:54:00+0000']
   # tst_bounds: ['20150822 02:55:00+0000', '20221125 19:51:00+0000']
+  # trn_bounds: ['19940216 06:03:00+0000', '20150822 02:54:00+0000'] # Bounds for geotail data resulting in 60/20/20 split AND NO VALIDATION SET
+  # val_bounds: ['20150822 02:55:00+0000', '20221125 19:51:00+0000']
+  # tst_bounds: ['20150822 02:55:00+0000', '20221125 19:51:00+0000']
   # trn_bounds: ['1994-11-30 18:00:00+0000', '2005-01-01 00:00:00+0000'] # Bounds for geotail data with the same test set as TM03
   # val_bounds: ['2010-01-01 00:00:00+0000', '2022-11-10 00:00:00+0000']
   # tst_bounds: ['2005-01-01 00:00:00+0000', '2010-01-01 00:00:00+0000']
@@ -48,7 +51,7 @@ data:
   # tst_bounds: ['20190912 23:34:00+0000', '20210626 23:59:00+0000']
   datastore: "/glade/u/home/cobrien/data/magnetotail/resampled_datasets.h5"
   in_key: "wind_full"
-  tar_key: "geotail_stricthighdensity_100s" # 'mms_temperatures_proc_v2_100s'
+  tar_key: "geotail_flexible_100s" # 'mms_temperatures_proc_v2_100s'
   cuts: [] # ['density_despike_20']
 # Model configuration
 model: 

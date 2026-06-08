@@ -21,8 +21,8 @@ class SWDataset(Dataset):
         input_normalizations = None,
         target_normalizations = None,
         position_normalizations = None,
-        min_time = pd.to_datetime('20150902 00:00:00+0000'), # Earliest MMS timestamp,
-        max_time = pd.to_datetime('20250101 00:00:00+0000'), # Latest MMS timestamp,
+        min_times = [pd.to_datetime('20150902 00:00:00+0000')], # Earliest MMS timestamp,
+        max_times = [pd.to_datetime('20250101 00:00:00+0000')], # Latest MMS timestamp,
         input_data = None,
         target_data = None,
         position_data = None,
@@ -44,8 +44,8 @@ class SWDataset(Dataset):
         self.input_normalizations = input_normalizations
         self.target_normalizations = target_normalizations
         self.position_normalizations = position_normalizations
-        self.min_time = min_time
-        self.max_time = max_time
+        self.min_times = min_times
+        self.max_times = max_times
         self.datastore = datastore
         self.in_key = in_key
         self.tar_key = tar_key
@@ -57,14 +57,17 @@ class SWDataset(Dataset):
             self.input_data = input_data
             self.target_data = target_data
             self.position_data = position_data
-        if (max_time > self.target_data['Epoch'].max()):
-            logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in target_data")
-        if (min_time < self.target_data['Epoch'].min()):
-            logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in target_data")
-        self.target_data = self.target_data.loc[
-            (self.target_data['Epoch'] <= max_time)&
-            (self.target_data['Epoch'] >= min_time), :
-        ] #Cut time of base data to be between min and max times
+        data_staging = [] # Staging list for target data DataFrames
+        for bounds in zip(self.min_times, self.max_times):
+            if (bounds[1] > self.target_data['Epoch'].max()):
+                logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in target_data")
+            if (bounds[0] < self.target_data['Epoch'].min()):
+                logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in target_data")
+            data_staging.append(self.target_data.loc[
+                (self.target_data['Epoch'] <= bounds[1])&
+                (self.target_data['Epoch'] >= bounds[0]), :
+            ]) #Cut time of base data to be between min and max times
+        self.target_data = pd.concat(data_staging) # Put all the segments back together
 
         #Normalize the target, input, and position data
         if self.target_normalizations is not None: #Should we do target normalization?
@@ -244,30 +247,21 @@ class SWDataModule(pl.LightningDataModule):
         
         # Bounds of train/test/validation sets
         if trn_bounds is not None:
-            self.trn_bounds = [
-                pd.to_datetime(trn_bounds[0]),
-                pd.to_datetime(trn_bounds[1])
-            ]
+            self.trn_bounds = [pd.to_datetime(time) for time in trn_bounds]
         else:
             self.trn_bounds = [
                 pd.to_datetime('20150902 00:00:00+0000'), # First 60% of MMS dataset by default
                 pd.to_datetime('20210411 00:00:00+0000')
             ]
         if val_bounds is not None:
-            self.val_bounds = [
-                pd.to_datetime(val_bounds[0]),
-                pd.to_datetime(val_bounds[1])
-            ]
+            self.val_bounds = [pd.to_datetime(time) for time in val_bounds]
         else:
             self.val_bounds = [
                 pd.to_datetime('20210411 00:00:00+0000'), # next 20% of MMS dataset by default
                 pd.to_datetime('20230222 00:00:00+0000')
             ]
         if tst_bounds is not None:
-            self.tst_bounds = [
-                pd.to_datetime(tst_bounds[0]),
-                pd.to_datetime(tst_bounds[1])
-            ]
+            self.tst_bounds = [pd.to_datetime(time) for time in tst_bounds]
         else:
             self.tst_bounds = [
                 pd.to_datetime('20230222 00:00:00+0000'), # last 20% of MMS dataset by default
@@ -288,8 +282,8 @@ class SWDataModule(pl.LightningDataModule):
             target_normalizations = self.target_normalizations,
             input_normalizations = self.input_normalizations,
             position_normalizations = self.position_normalizations,
-            min_time = self.trn_bounds[0],
-            max_time = self.trn_bounds[1],
+            min_times = self.trn_bounds[0::2],
+            max_times = self.trn_bounds[1::2],
             input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
@@ -310,8 +304,8 @@ class SWDataModule(pl.LightningDataModule):
             target_normalizations = self.target_normalizations,
             input_normalizations = self.input_normalizations,
             position_normalizations = self.position_normalizations,
-            min_time = self.val_bounds[0],
-            max_time = self.val_bounds[1],
+            min_times = self.val_bounds[0::2],
+            max_times = self.val_bounds[1::2],
             input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
@@ -332,8 +326,8 @@ class SWDataModule(pl.LightningDataModule):
             target_normalizations = self.target_normalizations,
             input_normalizations = self.input_normalizations,
             position_normalizations = self.position_normalizations,
-            min_time = self.tst_bounds[0],
-            max_time = self.tst_bounds[1],
+            min_times = self.tst_bounds[0::2],
+            max_times = self.tst_bounds[1::2],
             input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,

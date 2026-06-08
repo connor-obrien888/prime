@@ -4,9 +4,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import lightning.pytorch as pl
-from lightning.pytorch.callbacks import RichProgressBar, Timer, LearningRateFinder
+from lightning.pytorch.callbacks import RichProgressBar, Timer, LearningRateFinder, ModelCheckpoint
 import argparse
 import omegaconf
+import os
 
 
 # Add the prime_torch file to the system path so we can import it
@@ -70,6 +71,7 @@ def main(config, runname):
         p_drop = cfg.model.p_drop,
         pos_encoding_size=cfg.model.pos_encoding_size,
         loss=cfg.opt.loss,
+        save_debug_ckpt=cfg.experiments.save_debug_ckpt,
     )
 
     logger = pl.loggers.TensorBoardLogger(
@@ -77,6 +79,9 @@ def main(config, runname):
         name = runname,
         log_graph = True,
     )
+    versiontag = logger.log_dir # Get the tensorboard-assigned version number for this run
+    configtag = config.split('/')[-1].split('.')[0] # Just grab the name of the config file (ditch the path and yaml extension)
+    ckptpath = os.path.join(cfg.experiments.checkpoint, f"{runname}_{configtag}_{versiontag}/") # Path to save this run's checkpoints in
 
     trainer = pl.Trainer(
         accelerator=cfg.experiments.trainer.accelerator,
@@ -85,7 +90,7 @@ def main(config, runname):
             Timer(), 
             RichProgressBar(),
             # LearningRateFinder(),
-            # ModelCheckpoint(),
+            ModelCheckpoint(dirpath = ckptpath, every_n_epochs = cfg.experiments.trainer.log_every_n_epochs),
             ],
         logger = logger,
         # precision='16-true', #Lower the precision to not blow up memory
@@ -100,6 +105,7 @@ def main(config, runname):
     # print(f"Optimal batch size: {batch_size_finder}")
 
     predict_raw = model(datamodule.tst_ds.input_data, datamodule.tst_ds.position_data)
+    #TODO: add JD plot
     for idx, feature in enumerate(datamodule.target_features):
         predict_scaled = (predict_raw[:, idx*2] * datamodule.tst_ds.target_normalizations[feature][1]) + datamodule.tst_ds.target_normalizations[feature][0]
         obs_scaled = (datamodule.tst_ds.target_data[:, idx] * datamodule.tst_ds.target_normalizations[feature][1]) + datamodule.tst_ds.target_normalizations[feature][0]

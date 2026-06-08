@@ -40,11 +40,13 @@ class SWRegressor(pl.LightningModule):
             #Might need a section here to indicate how to handle position
             pos_encoding_size = None,
             loss = 'mae',
+            save_debug_ckpt = False,
             *args,
             **kwargs,
     ):
         super().__init__(*args, **kwargs) # Pass bonus arguments to the LightningModule
         self.save_hyperparameters() #inherited method from LightningModule
+        self.save_debug_ckpt = save_debug_ckpt # Controls whether validation set/predictions and model is saved in on_validation_epoch_end()
 
         # Optimiser Parameters
         self.optimizer = optimizer
@@ -152,7 +154,7 @@ class SWRegressor(pl.LightningModule):
         y_hat = self.decoder.forward(out, position)
         return y_hat
 
-    def predict(self, timeseries, position): # User-facing prediction step that scales data up and down automatically (human unit in, human unit out)
+    def predict_df(self, timeseries, position): # User-facing prediction step that scales data up and down automatically (human unit in, human unit out)
         in_scaled = timeseries.loc[:, self.in_norm.keys()].copy() # Get just the keys used for prediction
         for feature in self.in_norm.keys(): # Scale each input feature DOWN
             in_scaled[feature] = (in_scaled[feature] - self.in_norm[feature][0])/self.in_norm[feature][1]
@@ -172,7 +174,7 @@ class SWRegressor(pl.LightningModule):
         in_tensor = torch.from_numpy(in_arr.astype(np.float32)).to(self.device)
         pos_tensor = torch.from_numpy(pos_scaled.to_numpy().astype(np.float32)).to(self.device)
 
-        y_hat = self.forward(in_tensor, pos_tensor) # Run an actual forward pass
+        y_hat = self(in_tensor, pos_tensor) # Run an actual forward pass
         y_hat = y_hat.detach().cpu().numpy()
 
         # Try to initialize the return dataframe
@@ -191,6 +193,97 @@ class SWRegressor(pl.LightningModule):
                 tar_scaled[feature] = (y_hat[:, i] * self.tar_norm[feature][1]) + self.tar_norm[feature][0]
         
         return tar_scaled
+    
+    def predict_grid(
+        self,
+        ts,
+        gridsize,
+        x_extent,
+        y_extent=None,
+        z_extent=None,
+        y = 0,
+        z = 0,
+        loc_mask=None,
+        subtract_ecliptic=False,
+    ):
+        """
+        Generate predictions efficiently on a grid of points.
+
+        Parameters:
+            ts (DataFrame): Timeseries of data at L1 (Can be synthetic)
+            gridsize (float): Spacing of grid points
+            x_extent (list): Range of x values to calculate on
+            y_extent (list): Range of y values to calculate on. If None, z_extent must be specified.
+            z_extent (list): Range of z values to calculate on. If None, y_extent must be specified.
+            y (float, array-like): Y position that is held constant if y_extent is not specified. Default 0.
+            z (float, array-like): Z position that is held constant if z_extent is not specified. Default 0.
+            loc_mask (float, optional): RE from Earth to occlude (masking the magnetopause/magnetosheath)
+        Returns:
+            output_grid (ndarray): Array of predicted values on the grid. Shape (timestamps, x_extent/gridsize, y_extent/gridsize, features * 2)
+            timestamps (Series): Series of datetimes corresponding to each grid's time
+        """
+        # Generate the embeddings from the timeseries
+        in_scaled = ts.loc[:, self.in_norm.keys()].copy() # Get just the keys used for prediction
+        for feature in self.in_norm.keys(): # Scale each input feature DOWN
+            in_scaled[feature] = (in_scaled[feature] - self.in_norm[feature][0])/self.in_norm[feature][1]
+        in_arr = np.zeros((len(in_scaled) - self.window, self.window, len(self.in_norm.keys()))) # Prepare the input array in the shape the encoder expects
+        for i, idx in enumerate(in_scaled.index): # Fill each segment with input data
+            if i < self.window:
+                continue
+            in_arr[i - self.window, :, :] = in_scaled.loc[(idx - self.window - self.stride):(idx - self.stride - 1), :]
+        in_tensor = torch.from_numpy(in_arr.astype(np.float32)).to(self.device) # Make sure the inputs are on the same device as the model
+        embeddings, h = self.encoder.forward(in_tensor) # Generate the embeddings (1 forward pass)
+
+        # Create the grid based on the extent and gridsize specs
+        x_arr = np.arange(x_extent[0], x_extent[1], gridsize)  # Create a grid to calculate the magnetosheath conditions on
+        y_arr = np.asarray([y]) # This array is overwritten if y_extent is specified
+        z_arr = np.asarray([z]) # This array is overwritten if z_extent is specified
+        if y_extent is None and z_extent is None:
+            raise ValueError("Must specify y_extent or z_extent")
+        if y_extent is not None:
+            y_arr = np.arange(y_extent[0], y_extent[1], gridsize)  # Y positions to calculate the magnetosheath conditions on
+        if z_extent is not None:
+            z_arr = np.arange(z_extent[0], z_extent[1], gridsize)  # Z positions to calculate the magnetosheath conditions on
+        x_grid, y_grid, z_grid = np.meshgrid(x_arr, y_arr, z_arr)  # Create a grid to calculate the magnetosheath conditions on
+        
+        # Make the ultralong position tensor
+        steps = len(embeddings)
+        pos_arr = np.zeros((len(x_grid.flatten()) * steps, 3))  # Initialize array to hold the position data
+        pos_arr[:, 0] = np.tile(x_grid.flatten(), steps)
+        pos_arr[:, 1] = np.tile(y_grid.flatten(), steps)
+        pos_arr[:, 2] = np.tile(z_grid.flatten(), steps)
+        for i, feature in enumerate(self.pos_norm.keys()): # Scale each position feature DOWN
+            pos_arr[:, i] = (pos_arr[:, i] - self.pos_norm[feature][0])/self.pos_norm[feature][1]
+        pos_tensor = torch.from_numpy(pos_arr.astype(np.float32)).to(self.device) # Make sure the positions are on the same device as the model
+
+        # Extend embeddings to match the size of the position tensor
+        embeddings = embeddings.repeat_interleave(len(x_grid.flatten()), dim = 0) #NOTE: Torch repeat_interleave() works like numpy repeat()
+        
+        # Run a forward pass on the ultralong tensors and rescale the outputs to human units
+        y_hat = self.decoder(embeddings, pos_tensor) # Run an actual forward pass
+        y_hat = y_hat.detach().cpu().numpy()
+        output_raveled = np.empty(y_hat.shape)
+        if y_hat.shape[1] == 2*len(self.tar_norm.keys()): # If the output is means + stdevs
+            for i, feature in enumerate(self.tar_norm.keys()):
+                output_raveled[:, i*2] = (y_hat[:, i*2] * self.tar_norm[feature][1]) + self.tar_norm[feature][0]
+                output_raveled[:, i*2 +1 ] = ((y_hat[:, i*2] + y_hat[:, i*2 + 1]) * self.tar_norm[feature][1]) + self.tar_norm[feature][0] - output_raveled[:, i*2]
+        else:
+            for i, feature in enumerate(self.tar_norm.keys()):
+                output_raveled[:, i]  = (y_hat[:, i] * self.tar_norm[feature][1]) + self.tar_norm[feature][0]
+
+        # Reshape the output data to transform it back to the grid
+        output_grid = output_raveled.reshape(steps, len(y_arr), len(x_arr), len(z_arr), y_hat.shape[1])  # Reshape the output data into the correct shape
+        output_grid = np.swapaxes(output_grid, 1, 2)  # Move the y axis to the second axis (new order is frame, x, y, z, param)
+        if loc_mask is not None:
+            r_grid = np.swapaxes(np.sqrt(x_grid**2 + y_grid**2 + z_grid**2), 0, 1) # radial distance to origin at all grid points
+            output_mask = np.zeros(output_grid.shape, dtype=bool)  # Initialize array to hold the frame mask
+            # # Make a mask for all points outside the bow shock or inside the magnetopause
+            for i in np.arange(steps):
+                for j in np.arange(output_grid.shape[-1]):
+                    output_mask[i, :, : , :, j] = (r_grid < loc_mask)
+            # Make a masked version of the output grid
+            output_grid = np.ma.masked_array(output_grid, mask=output_mask)
+        return output_grid
     
     def predict_step(self, batch, batch_idx):
         timeseries, position, target, times = batch
@@ -316,6 +409,20 @@ class SWRegressor(pl.LightningModule):
         self.logger.experiment.add_figure(f"JD/val_epoch{self.current_epoch}", fig)
 
         # TODO: Plot a holdout event
+
+        # TODO: save model to compare to checkpoint
+        if self.save_debug_ckpt:
+            import pickle # For saving the normalizations
+            np.save('/glade/u/home/cobrien/data/prime/debug_packet/predictions.npy', predictions)
+            np.save('/glade/u/home/cobrien/data/prime/debug_packet/targets.npy', targets)
+            with open('/glade/u/home/cobrien/data/prime/debug_packet/val_times.pkl', 'wb') as f:
+                pickle.dump(self.val_times, f)
+            with open('/glade/u/home/cobrien/data/prime/debug_packet/in_norm.pkl', 'wb') as f:
+                pickle.dump(self.in_norm, f)
+            with open('/glade/u/home/cobrien/data/prime/debug_packet/tar_norm.pkl', 'wb') as f:
+                pickle.dump(self.tar_norm, f)
+            with open('/glade/u/home/cobrien/data/prime/debug_packet/pos_norm.pkl', 'wb') as f:
+                pickle.dump(self.pos_norm, f)
 
         self.val_predictions.clear()
         self.val_targets.clear()
