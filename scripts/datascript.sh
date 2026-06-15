@@ -1,4 +1,4 @@
-#PBS -N strictdata
+#PBS -N cinemadata
 #PBS -A UBUB0018
 #PBS -q main
 #PBS -j oe

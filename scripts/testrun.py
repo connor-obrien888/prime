@@ -79,7 +79,7 @@ def main(config, runname):
         name = runname,
         log_graph = True,
     )
-    versiontag = logger.log_dir # Get the tensorboard-assigned version number for this run
+    versiontag = logger.log_dir.split('/')[-1] # Get the tensorboard-assigned version number for this run
     configtag = config.split('/')[-1].split('.')[0] # Just grab the name of the config file (ditch the path and yaml extension)
     ckptpath = os.path.join(cfg.experiments.checkpoint, f"{runname}_{configtag}_{versiontag}/") # Path to save this run's checkpoints in
 
@@ -90,7 +90,11 @@ def main(config, runname):
             Timer(), 
             RichProgressBar(),
             # LearningRateFinder(),
-            ModelCheckpoint(dirpath = ckptpath, every_n_epochs = cfg.experiments.trainer.log_every_n_epochs),
+            ModelCheckpoint(
+                dirpath = ckptpath,
+                every_n_epochs = cfg.experiments.trainer.log_every_n_epochs,
+                save_top_k = -1, # Saves every checkpoint every_n_epochs (could set it to some other number to save only that number)
+            ),
             ],
         logger = logger,
         # precision='16-true', #Lower the precision to not blow up memory

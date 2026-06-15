@@ -23,13 +23,12 @@ experiments:
 #Dataset configuration
 data:
   scaler_type: 'IQR' # Scaler to use for input and target data. Options: interquartile range (IQR), standard deviation (STD), minmax (MINMAX, not implemented)
-  target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
+  # target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2'] #Solar Wind
+  target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_dis_numberdensity_fast', 'mms1_dis_temppara_fast', 'mms1_dis_tempperp_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
   input_features: ['Np', 'V_GSE_0', 'V_GSE_1', 'V_GSE_2', 'THERMAL_SPD', 'BGSE_0', 'BGSE_1', 'BGSE_2', 'PGSE_0', 'PGSE_1', 'PGSE_2']
-  # target_features: ['mms1_dis_bulkv_gse_fast_0','mms1_fgm_b_gse_srvy_l2_2']
-  # input_features: ['mms1_dis_bulkv_gse_fast_0',]
   position_features: ['r_gse_x', 'r_gse_y', 'r_gse_z']
   interp_flags: ['interped_mfi', 'interped_swe']
-  region: 'solar wind'
+  region: 'magnetosheath'
   cadence: '100s'
   interpolate: True
   window: 150
