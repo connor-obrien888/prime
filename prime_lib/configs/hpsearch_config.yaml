@@ -9,7 +9,7 @@ experiments:
     precision: 32 # "16-mixed", "32-true", "32-float", "16-mixed", etc
     profiler: simple # options are 'XLAProfiler' (TPU), 'PyTorchProfiler', warning: PyTorchProfiler only works on cpu/gpu according to docs
     max_epochs: 100 # number of epochs to train for
-    log_every_n_steps: 10
+    log_every_n_epochs: 20
     check_val_every_n_epoch: 1
     detect_anomaly: False
     limit_train_batches: 1.0  #0.05

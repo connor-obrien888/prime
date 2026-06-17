@@ -4,16 +4,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 import lightning.pytorch as pl
-from lightning.pytorch.callbacks import RichProgressBar, Timer, LearningRateFinder
+from lightning.pytorch.callbacks import RichProgressBar, Timer, LearningRateFinder, ModelCheckpoint
 import argparse
 import omegaconf
+import os
 
-
-# Add the prime_torch file to the system path so we can import it
-import sys
-sys.path.append("/glade/u/home/cobrien/prime/prime_lib/primesw")
-from data import SWDataset, SWDataModule
-from prime_torch import crps, SWRegressor
+import primesw
+from primesw import data as pswd
 
 def main(config, runname):
     torch.set_float32_matmul_precision('medium')
@@ -21,12 +18,13 @@ def main(config, runname):
         config
     )
 
-    datamodule = SWDataModule(
+    datamodule = pswd.SWDataModule(
         target_features = cfg.data.target_features,
         input_features = cfg.data.input_features,
         position_features = cfg.data.position_features,
         interp_flags = cfg.data.interp_flags,
         region = cfg.data.region,
+        cuts = cfg.data.cuts,
         cadence = cfg.data.cadence,
         interpolate = cfg.data.interpolate,
         window = cfg.data.window,
@@ -40,10 +38,11 @@ def main(config, runname):
         datastore = cfg.data.datastore,
         in_key = cfg.data.in_key,
         tar_key = cfg.data.tar_key,
+        scaler_type = cfg.data.scaler_type,
     )
     # datamodule.setup() #Since it is called in Trainer below, no need to set up
 
-    model = SWRegressor(
+    model = primesw.prime_torch.SWRegressor(
         optimizer = cfg.opt.optimizer,
         lr = cfg.opt.lr,
         lr_scheduler = cfg.opt.lr_scheduler,
@@ -54,7 +53,9 @@ def main(config, runname):
         in_dim = len(cfg.data.input_features),
         tar_dim = len(cfg.data.target_features),
         pos_dim = len(cfg.data.position_features),
+        in_norm = datamodule.input_normalizations,
         tar_norm = datamodule.target_normalizations,
+        pos_norm = datamodule.position_normalizations,
         window = cfg.data.window,
         stride = cfg.data.stride,
         interp_frac = cfg.data.interp_frac,
@@ -66,6 +67,7 @@ def main(config, runname):
         p_drop = cfg.model.p_drop,
         pos_encoding_size=cfg.model.pos_encoding_size,
         loss=cfg.opt.loss,
+        save_debug_ckpt=cfg.experiments.save_debug_ckpt,
     )
 
     logger = pl.loggers.TensorBoardLogger(
@@ -73,6 +75,9 @@ def main(config, runname):
         name = runname,
         log_graph = True,
     )
+    versiontag = logger.log_dir.split('/')[-1] # Get the tensorboard-assigned version number for this run
+    configtag = config.split('/')[-1].split('.')[0] # Just grab the name of the config file (ditch the path and yaml extension)
+    ckptpath = os.path.join(cfg.experiments.checkpoint, f"{runname}_{configtag}_{versiontag}/") # Path to save this run's checkpoints in
 
     trainer = pl.Trainer(
         accelerator=cfg.experiments.trainer.accelerator,
@@ -81,7 +86,11 @@ def main(config, runname):
             Timer(), 
             RichProgressBar(),
             # LearningRateFinder(),
-            # ModelCheckpoint(),
+            ModelCheckpoint(
+                dirpath = ckptpath,
+                every_n_epochs = cfg.experiments.trainer.log_every_n_epochs,
+                save_top_k = -1, # Saves every checkpoint every_n_epochs (could set it to some other number to save only that number)
+            ),
             ],
         logger = logger,
         # precision='16-true', #Lower the precision to not blow up memory
@@ -96,6 +105,7 @@ def main(config, runname):
     # print(f"Optimal batch size: {batch_size_finder}")
 
     predict_raw = model(datamodule.tst_ds.input_data, datamodule.tst_ds.position_data)
+    #TODO: add JD plot
     for idx, feature in enumerate(datamodule.target_features):
         predict_scaled = (predict_raw[:, idx*2] * datamodule.tst_ds.target_normalizations[feature][1]) + datamodule.tst_ds.target_normalizations[feature][0]
         obs_scaled = (datamodule.tst_ds.target_data[:, idx] * datamodule.tst_ds.target_normalizations[feature][1]) + datamodule.tst_ds.target_normalizations[feature][0]

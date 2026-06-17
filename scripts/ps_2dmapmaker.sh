@@ -1,4 +1,4 @@
-#PBS -N cinemadata
+#PBS -N psmap
 #PBS -A UBUB0018
 #PBS -q main
 #PBS -j oe
@@ -16,5 +16,4 @@ export KAIJU_INSTALL_DIR=/glade/u/home/cobrien/kaiju-private
 source $KAIJU_INSTALL_DIR/scripts/setupEnvironment.sh
 export KAIJU_BUILD_DIR=/glade/u/home/cobrien/kaiju-private/build_mpi
 
-# python3 datascript.py
-python3 plasmasheet_datascript.py
+python3 ps_mapmaker.py

@@ -21,8 +21,8 @@ class SWDataset(Dataset):
         input_normalizations = None,
         target_normalizations = None,
         position_normalizations = None,
-        min_time = pd.to_datetime('20150902 00:00:00+0000'), # Earliest MMS timestamp,
-        max_time = pd.to_datetime('20250101 00:00:00+0000'), # Latest MMS timestamp,
+        min_times = [pd.to_datetime('20150902 00:00:00+0000')], # Earliest MMS timestamp,
+        max_times = [pd.to_datetime('20250101 00:00:00+0000')], # Latest MMS timestamp,
         input_data = None,
         target_data = None,
         position_data = None,
@@ -44,8 +44,8 @@ class SWDataset(Dataset):
         self.input_normalizations = input_normalizations
         self.target_normalizations = target_normalizations
         self.position_normalizations = position_normalizations
-        self.min_time = min_time
-        self.max_time = max_time
+        self.min_times = min_times
+        self.max_times = max_times
         self.datastore = datastore
         self.in_key = in_key
         self.tar_key = tar_key
@@ -57,14 +57,17 @@ class SWDataset(Dataset):
             self.input_data = input_data
             self.target_data = target_data
             self.position_data = position_data
-        if (max_time > self.target_data['Epoch'].max()):
-            logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in target_data")
-        if (min_time < self.target_data['Epoch'].min()):
-            logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in target_data")
-        self.target_data = self.target_data.loc[
-            (self.target_data['Epoch'] <= max_time)&
-            (self.target_data['Epoch'] >= min_time), :
-        ] #Cut time of base data to be between min and max times
+        data_staging = [] # Staging list for target data DataFrames
+        for bounds in zip(self.min_times, self.max_times):
+            if (bounds[1] > self.target_data['Epoch'].max()):
+                logger.warning(f"The max_time passed to SWDataset is larger than the latest entry in target_data")
+            if (bounds[0] < self.target_data['Epoch'].min()):
+                logger.warning(f"The min_time passed to SWDataset is smaller than the first entry in target_data")
+            data_staging.append(self.target_data.loc[
+                (self.target_data['Epoch'] <= bounds[1])&
+                (self.target_data['Epoch'] >= bounds[0]), :
+            ]) #Cut time of base data to be between min and max times
+        self.target_data = pd.concat(data_staging) # Put all the segments back together
 
         #Normalize the target, input, and position data
         if self.target_normalizations is not None: #Should we do target normalization?
@@ -101,7 +104,7 @@ class SWDataset(Dataset):
             if (np.isnan(self.target_scaled.loc[idx, :].values).any())|(np.isnan(self.position_scaled.loc[idx, :].values).any())|(np.isnan(self.target_data.loc[idx, 'input_idx'])): # Skip targets that are nans
                 continue
             target_time = self.target_data.loc[idx, 'Epoch'].strftime('%Y%m%d %H:%M:%S') # Used to get correct input window
-            input_idx = self.target_data.loc[idx, 'input_idx'] #self.input_data.loc[self.input_data['Epoch'] == self.target_data.loc[idx, 'Epoch'], :].index[0]
+            input_idx = self.target_data.loc[idx, 'input_idx'] # Precomputed version of self.input_data.loc[self.input_data['Epoch'] == self.target_data.loc[idx, 'Epoch'], :].index[0]
             segment = self.input_scaled.loc[(input_idx - self.window - self.stride + 1):(input_idx - self.stride), :]
             interp_arr = self.input_data.loc[(input_idx - self.window - self.stride + 1):(input_idx - self.stride), self.interp_flags]
             interp_lengths = [np.sum(interp_arr[key]) for key in self.interp_flags]
@@ -162,6 +165,7 @@ class SWDataModule(pl.LightningDataModule):
         datastore = "~/data/prime/sw_data.h5",
         in_key = "wind_1min_complete",
         tar_key = "mms_1min_labeled",
+        scaler_type = 'STD',
     ):
         super().__init__()
         self.target_features = target_features # Features model uses as targets
@@ -174,6 +178,7 @@ class SWDataModule(pl.LightningDataModule):
         self.cuts = cuts # How to cut data (e.g. stability, solar wind table)
         self.batch_size = batch_size # Training batch size
         self.num_workers = num_workers # Number of workers for loading data
+        self.scaler_type = scaler_type # Type of scaling to apply to input and target data
 
         if window is not None:
             self.window = window
@@ -200,53 +205,63 @@ class SWDataModule(pl.LightningDataModule):
         if self.cuts is not None: # Are we cutting the dataset for only stable regions, or other cuts?
             for cut in self.cuts:
                 if cut == 'stability': # Only train on data where MMS is in same region for 15+ minutes
-                    self.target_data = self.target_data[self.target_data['stable'] == 1, :]
-                    self.position_data = self.position_data[self.position_data['stable'] == 1, :]
+                    logger.info(f"Dataset cut {cut}")
+                    self.target_data = self.target_data.loc[self.target_data['stable'] == 1, :]
+                    self.position_data = self.position_data.loc[self.position_data['stable'] == 1, :]
                 if cut == 'solar wind table': # Only use data with the solar wind energy-azimuth table
-                    self.target_data = self.target_data[self.target_data['SW_table'] == 1, :]
-                    self.position_data = self.position_data[self.position_data['SW_table'] == 1, :]
+                    logger.info(f"Dataset cut {cut}")
+                    self.target_data = self.target_data.loc[self.target_data['SW_table'] == 1, :]
+                    self.position_data = self.position_data.loc[self.position_data['SW_table'] == 1, :]
+                if cut.startswith('density_despike'): # Developed to remove density spikes (>Ncm-3 for density_despike_N) in Geotail data.
+                    logger.info(f"Dataset cut {cut}")
+                    threshold = int(cut.split('_')[-1])
+                    self.target_data = self.target_data.loc[self.target_data['N'] <= threshold, :]
+                    self.position_data = self.position_data.loc[self.position_data['N'] <= threshold, :]
 
-        tar_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
+        tar_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std) or (mean, iqr)
         for feature in self.target_features:
-            tar_norm_tup_list.append((self.target_data[feature].mean(), self.target_data[feature].std())) #TODO: change this based on some config (like, the second value could be the IQR)
+            if self.scaler_type == 'STD':
+                tar_norm_tup_list.append((self.target_data[feature].mean(), self.target_data[feature].std()))
+            if self.scaler_type == 'IQR':
+                tar_norm_tup_list.append((np.nanpercentile(self.target_data[feature],50), # Median
+                                          np.nanpercentile(self.target_data[feature], 75) - np.nanpercentile(self.target_data[feature], 25))) # Interquartile range
         self.target_normalizations = dict(zip(self.target_features, tar_norm_tup_list)) # Dictionary of information used to do normalization
 
-        in_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
+        in_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std) or (mean, iqr)
         for feature in self.input_features:
-            in_norm_tup_list.append((self.raw_in_data[feature].mean(), self.raw_in_data[feature].std())) #TODO: change this based on some config (like, the second value could be the IQR)
+            if self.scaler_type == 'STD':
+                in_norm_tup_list.append((self.raw_in_data[feature].mean(), self.raw_in_data[feature].std()))
+            if self.scaler_type == 'IQR':
+                in_norm_tup_list.append((np.nanpercentile(self.raw_in_data[feature],50), # Median
+                                         np.nanpercentile(self.raw_in_data[feature], 75) - np.nanpercentile(self.raw_in_data[feature], 25))) # Interquartile range
         self.input_normalizations = dict(zip(self.input_features, in_norm_tup_list)) # Dictionary of information used to do normalization
 
-        pos_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std)
+        pos_norm_tup_list = [] #List of tuples used to store normalization values. Typically this is (mean, std) or (mean, iqr)
         for feature in self.position_features: #For the purposes of normalization, the position features count as inputs
-            pos_norm_tup_list.append((self.position_data[feature].mean(), self.position_data[feature].std()))
+            if self.scaler_type == 'STD':
+                pos_norm_tup_list.append((self.position_data[feature].mean(), self.position_data[feature].std()))
+            if self.scaler_type == 'IQR':
+                pos_norm_tup_list.append((np.nanpercentile(self.position_data[feature],50), # Median
+                                          np.nanpercentile(self.position_data[feature], 75) - np.nanpercentile(self.position_data[feature], 25))) # Interquartile range
         self.position_normalizations = dict(zip(self.position_features, pos_norm_tup_list)) # Dictionary of information used to do normalization
         
         # Bounds of train/test/validation sets
         if trn_bounds is not None:
-            self.trn_bounds = [
-                pd.to_datetime(trn_bounds[0]),
-                pd.to_datetime(trn_bounds[1])
-            ]
+            self.trn_bounds = [pd.to_datetime(time) for time in trn_bounds]
         else:
             self.trn_bounds = [
                 pd.to_datetime('20150902 00:00:00+0000'), # First 60% of MMS dataset by default
                 pd.to_datetime('20210411 00:00:00+0000')
             ]
         if val_bounds is not None:
-            self.val_bounds = [
-                pd.to_datetime(val_bounds[0]),
-                pd.to_datetime(val_bounds[1])
-            ]
+            self.val_bounds = [pd.to_datetime(time) for time in val_bounds]
         else:
             self.val_bounds = [
                 pd.to_datetime('20210411 00:00:00+0000'), # next 20% of MMS dataset by default
                 pd.to_datetime('20230222 00:00:00+0000')
             ]
         if tst_bounds is not None:
-            self.tst_bounds = [
-                pd.to_datetime(tst_bounds[0]),
-                pd.to_datetime(tst_bounds[1])
-            ]
+            self.tst_bounds = [pd.to_datetime(time) for time in tst_bounds]
         else:
             self.tst_bounds = [
                 pd.to_datetime('20230222 00:00:00+0000'), # last 20% of MMS dataset by default
@@ -267,8 +282,8 @@ class SWDataModule(pl.LightningDataModule):
             target_normalizations = self.target_normalizations,
             input_normalizations = self.input_normalizations,
             position_normalizations = self.position_normalizations,
-            min_time = self.trn_bounds[0],
-            max_time = self.trn_bounds[1],
+            min_times = self.trn_bounds[0::2],
+            max_times = self.trn_bounds[1::2],
             input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
@@ -289,8 +304,8 @@ class SWDataModule(pl.LightningDataModule):
             target_normalizations = self.target_normalizations,
             input_normalizations = self.input_normalizations,
             position_normalizations = self.position_normalizations,
-            min_time = self.val_bounds[0],
-            max_time = self.val_bounds[1],
+            min_times = self.val_bounds[0::2],
+            max_times = self.val_bounds[1::2],
             input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
@@ -311,8 +326,8 @@ class SWDataModule(pl.LightningDataModule):
             target_normalizations = self.target_normalizations,
             input_normalizations = self.input_normalizations,
             position_normalizations = self.position_normalizations,
-            min_time = self.tst_bounds[0],
-            max_time = self.tst_bounds[1],
+            min_times = self.tst_bounds[0::2],
+            max_times = self.tst_bounds[1::2],
             input_data = self.raw_in_data,
             target_data = self.target_data,
             position_data = self.position_data,
