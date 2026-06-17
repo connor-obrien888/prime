@@ -8,7 +8,7 @@ experiments:
     strategy: auto # multi-gpu: ddp_find_unused_parameters_true, single-gpu: "auto"
     precision: 32 # "16-mixed", "32-true", "32-float", "16-mixed", etc
     profiler: simple # options are 'XLAProfiler' (TPU), 'PyTorchProfiler', warning: PyTorchProfiler only works on cpu/gpu according to docs
-    max_epochs: 200 # number of epochs to train for
+    max_epochs: 500 # number of epochs to train for
     log_every_n_epochs: 20 # Save a model checkpoint every n epochs
     check_val_every_n_epoch: 1
     detect_anomaly: False
