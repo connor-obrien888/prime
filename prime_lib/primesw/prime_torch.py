@@ -16,6 +16,10 @@ import warnings
 from .models import LinearDecoder, RecurrentEncoder, TSPassthroughEncoder
     
 class SWRegressor(pl.LightningModule):
+    '''
+        This class wraps instances of the PRIME architecutre trained on different plasma regions throughout perigeospace.
+        It is recommended to instantiate `SWRegressor` objects using `primesw.load()` and specifying the desired model (`PRIME`, `PRIME-SH`, `PRIME-PS`) rather than calling this class directly.
+    '''
     def __init__(
             self,
             optimizer = "adam",
@@ -47,6 +51,33 @@ class SWRegressor(pl.LightningModule):
             *args,
             **kwargs,
     ):
+        '''
+        :param [str] optimizer: Optimization algorithm used to update model weights. Accepts any Pytorch optimizer alias.
+        :param [float] lr: Optimization algorithm learning rate.
+        :param [str] lr_scheduler: Optimization algorithm learning rate scheduler. Options are 'cosine', 'cosine_warm', 'plateau', 'linear', or 'const'
+        :param [int] patience: Learning rate scheduler patience.
+        :param [float] factor: Learning rate scheduler factor.
+        :param [float] weight_decay: Optimization algorithm weight decay factor.
+        :param [int] total_iters: Total training epochs, used by learning rate scheduler.
+        :param [int] in_dim: Input timeseries dimensions (number of features).
+        :param [int] tar_dim: Target dimensions (number of features).
+        :param [stintr] pos_dim: Number of position dimensions (number of coordinates, generally 3).
+        :param [dict] in_norm: Dictionary of input features and their normalization factors.
+        :param [dict] tar_norm: Dictionary of target features and their normalization factors.
+        :param [dict] pos_norm: Dictionary of position features and their normalization factors.
+        :param [int] window: Timeseries window size.
+        :param [int] stride: Prediction lead time.
+        :param [float] interp_frac: Percent permissible interpolated data in each input timeseries.
+        :param [str] decoder_type: Decoder architecture. Options are 'linear' or 'prob_linear'.
+        :param [str] encoder_type: Encoder architecture. Options are 'linear' or 'rnn'.
+        :param [list of int] decoder_hidden_layers: Size of each of the hidden layers in decoder.
+        :param [int] encoder_hidden_dim: Dimension of hidden layers in encoder.
+        :param [int] encoder_num_layers: Number of layers in the encoder.
+        :param [float] p_drop: Dropout rate for model during training.
+        :param [int] pos_encoding_size: Order of random Fourier features applied to position data.
+        :param [str] loss: Loss function for model, options are 'mae' or 'crps'. 'crps' only usable for 'prob_linear' decoders.
+        :param [bool] save_debug_ckpt: Whether to dump a debug packet on each validation epoch end.
+        '''
         super().__init__(*args, **kwargs) # Pass bonus arguments to the LightningModule
         self.save_hyperparameters() #inherited method from LightningModule
         self.save_debug_ckpt = save_debug_ckpt # Controls whether validation set/predictions and model is saved in on_validation_epoch_end()
@@ -669,7 +700,7 @@ class SWRegressor(pl.LightningModule):
                     (np.sqrt(2) * val_preds[:, i*2+1])
                 )
                 for j in range(len(val_preds)):
-                    cumulative_dist[:,i] += (1/len(standard_err)) * np.heaviside(phi - 0.5*(errorfunc(standard_err[j,i])+1) , 1) #Calculate the cumulative distribution for each parameter
+                    cumulative_dist[:,i] += (1/len(standard_err)) * np.heaviside(phi - 0.5*(errorfunc(standard_err[j])+1) , 1) #Calculate the cumulative distribution for each parameter
             
             for i, feature in enumerate(self.tar_norm.keys()):
                 ax[0].plot(phi, cumulative_dist[:,i], label = feature)

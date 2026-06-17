@@ -1,8 +1,10 @@
 Usage
 =====
 
-PRIME and PRIME-SH are accessed using the ``prime`` and ``primesh`` classes. For more details see the below sections:
+``primesw`` can load three different models by default by specifying keywords to ``primesw.load()``.
+There are shared characteristics...
 
 .. toctree::
-   sw
+   swregressor
    sh
+   ps
