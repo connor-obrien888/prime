@@ -1,14 +1,14 @@
 [project]
 name = "primesw"
-version = "0.5.0"
+version = "1.0.0"
 description = "Probabilistic Regressor for Input to the Magnetosphere Estimation (Solar Wind)"
 authors = [{name = "Connor OBrien", email = "obrienco@bu.edu"}]
 license = {text = "GPL-3.0"}
 readme = "README.md"
 classifiers=[
-      'Development Status :: 4 - Beta',
+      'Development Status :: 5 - Production/Stable',
       'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
-      'Programming Language :: Python :: 3.8',
+      'Programming Language :: Python :: 3.12',
       'Topic :: Scientific/Engineering :: Physics',
       'Topic :: Scientific/Engineering :: Astronomy',
       'Topic :: Scientific/Engineering :: Atmospheric Science'

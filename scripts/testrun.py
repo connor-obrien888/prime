@@ -9,12 +9,8 @@ import argparse
 import omegaconf
 import os
 
-
-# Add the prime_torch file to the system path so we can import it
-import sys
-sys.path.append("/glade/u/home/cobrien/prime/prime_lib/primesw")
-from data import SWDataset, SWDataModule
-from prime_torch import crps, SWRegressor
+import primesw
+from primesw import data as pswd
 
 def main(config, runname):
     torch.set_float32_matmul_precision('medium')
@@ -22,7 +18,7 @@ def main(config, runname):
         config
     )
 
-    datamodule = SWDataModule(
+    datamodule = pswd.SWDataModule(
         target_features = cfg.data.target_features,
         input_features = cfg.data.input_features,
         position_features = cfg.data.position_features,
@@ -46,7 +42,7 @@ def main(config, runname):
     )
     # datamodule.setup() #Since it is called in Trainer below, no need to set up
 
-    model = SWRegressor(
+    model = primesw.prime_torch.SWRegressor(
         optimizer = cfg.opt.optimizer,
         lr = cfg.opt.lr,
         lr_scheduler = cfg.opt.lr_scheduler,
