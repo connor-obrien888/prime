@@ -5,6 +5,7 @@ Welcome to PRIME's documentation!
 This package provides an API to access the L1-to-Earth solar wind propagation algorithm PRIME, the L1-to-magnetosheath propagation algorithm PRIME-SH, and the L1-to-plasmasheet propagation algorithm PRIME-PS.
 For details on the algorithm development, see the `paper <https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full>`_.
 For details on the magnetosheath prediction algorithm PRIME-SH, see the `other paper <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2024JH000235>`_.
+For details on the plasmasheet prediction algorithm PRIME-PS, you'll have to wait for the forthcoming paper.
 Install using pip:
 
 .. code-block:: console
@@ -19,24 +20,26 @@ You can also find the latest version on `GitHub <https://github.com/connor-obrie
 
 Why Use PRIME?
 --------------
-The solar wind propagation algorithm PRIME is a probabilistic recurrent neural network trained to predict the solar wind conditions just upstream of Earth's bow shock using measurements of the solar wind at the first Earth-Sun Lagrange point (L1). PRIME is capable of predicting:
+The solar wind propagation algorithm PRIME is a probabilistic recurrent neural network trained to predict the solar wind conditions just upstream of Earth's bow shock using measurements of the solar wind at the first Earth-Sun Lagrange point (L1).
+PRIME is capable of predicting:
 
 - Solar wind flow velocity vector (km/s) in GSE coordinates
 - Interplanetary magnetic field vector (nT) in GSM coordinates
 - Solar wind plasma number density (cm^-3)
 
 PRIME's predictions consist of a mean and a variance defining a Gaussian probability distribution for each parameter. 
-Users can use these distributions to define confidence intervals, error bars, or another measure of uncertainty suited for the user's task.
+Use these distributions to define confidence intervals, error bars, or another measure of uncertainty suited for your task.
 PRIME's probability distributions are reliable to within 3.5% on average, and the means of the distribution are shown to be more accurate predictors of the solar wind than the outputs of other common solar wind propagation algorithms (see the `paper <https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full>`_ for more details).
 
-This package also includes the magnetosheath and plasmasheet preidction algorithms PRIME-SH and PRIME-PS.
-These algorithms also predict a mean and a variance defining a Gaussian probability distribution for each parameter in the regions they predict.
+This package also includes the magnetosheath and plasmasheet prediction algorithms PRIME-SH and PRIME-PS.
+Like PRIME, these algorithms serve a mean and a variance defining a Gaussian probability distribution for each parameter in the regions they predict.
 Since they were trained on different MMS data, they are capable of predicting the perp-to-B and parallel-to-B temperature in the magnetosheath (PRIME-SH), and the electron and ion temperatures in the plasmasheet (PRIME-PS).
 
 Predicting with PRIME
 ---------------------
 
-Making predictions with PRIME using the ``primesw`` package is done using the ``primesw.SWRegressor`` class. Use the ``primesw.load()`` function to instantiate the model, being sure to specify which model you desire:
+Making predictions with PRIME using the ``primesw`` package is done using the ``SWRegressor`` class. 
+Use the ``primesw.load()`` function to instantiate the model, being sure to specify which model you want to load:
 
 .. code-block:: python
 
@@ -45,14 +48,14 @@ Making predictions with PRIME using the ``primesw`` package is done using the ``
    propagator.predict_ts(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
 
 
-``primesw.SWRegressor`` objects can also make predictions at locations other than Earth's bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:
+``SWRegressor`` objects can also make predictions at locations other than Earth's bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:
 
 .. code-block:: python
 
    propagator.predict_ts(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00', pos = [13, 5, 0])
 
 
-Users can also generate synthetic L1 solar wind data using the ``primesw.SWRegressor.build_synth_input()`` method in order to use PRIME to study solar wind propagtion in a theoretical sense.
+Users can also generate synthetic L1 solar wind data using the ``SWRegressor.build_synth_input()`` method in order to use PRIME to study solar wind propagtion in a theoretical sense.
 It is not recommended to use PRIME to predict the solar wind in areas it was not trained on, or using inputs outside the range of solar wind conditions it was trained on.
 
 Citation

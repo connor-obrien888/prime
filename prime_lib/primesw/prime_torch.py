@@ -186,6 +186,8 @@ class SWRegressor(pl.LightningModule):
     def forward(self, x, position):
         '''
         Model forward pass.
+        
+        :meta private:
         '''
         out, h = self.encoder.forward(x)
         y_hat = self.decoder.forward(out, position)
@@ -574,6 +576,8 @@ class SWRegressor(pl.LightningModule):
     def predict_step(self, batch, batch_idx):
         '''
         One prediction step (no gradient updates).
+
+        :meta private:
         '''
         timeseries, position, target, times = batch
         with torch.no_grad():
@@ -591,6 +595,8 @@ class SWRegressor(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         '''
         One training step. Updates train-side metrics.
+
+        :meta private:
         '''
         timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
@@ -618,6 +624,8 @@ class SWRegressor(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         '''
         One validation step. Updates validation-side metrics.
+
+        :meta private:
         '''
         timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
@@ -639,6 +647,8 @@ class SWRegressor(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         '''
         One test step. Updates test-side metrics.
+
+        :meta private:
         '''
         timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
@@ -658,7 +668,11 @@ class SWRegressor(pl.LightningModule):
         }
     
     def on_validation_epoch_end(self):
-        # Compute and log all accumulated metrics
+        '''
+        Compute and log all accumulated metrics
+
+        :meta private:
+        '''
         if self.loss == 'crps':
             self.log('MAE/val', self.val_mae.compute().mean(), on_epoch = True, prog_bar = True, logger = True, sync_dist = True)
             # Clear all the metrics
@@ -754,21 +768,32 @@ class SWRegressor(pl.LightningModule):
         torch.cuda.empty_cache()
 
     def on_train_epoch_end(self):
+        '''
+        :meta private:
+        '''
         gc.collect()
         torch.cuda.empty_cache()
 
     def on_test_epoch_end(self):
+        '''
+        :meta private:
+        '''
         if self.loss == 'crps':
             self.log('MAE/test', self.tst_mae.compute(), on_epoch=True, logger=True, sync_dist=True)
 
     def on_before_optimizer_step(self, optimizer):
         '''
         Computes the 2-norm for each layer. If using mixed precision, the gradients are already unscaled here.
+
+        :meta private:
         '''
         norms = pl.utilities.grad_norm(self.encoder, norm_type=2)
         self.log_dict(norms)
 
     def configure_optimizers(self):
+        '''
+        :meta private:
+        '''
         match (self.optimizer):
             case "adam":
                 optimizer = torch.optim.Adam(
