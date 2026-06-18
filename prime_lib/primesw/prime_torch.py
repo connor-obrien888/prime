@@ -239,9 +239,9 @@ class SWRegressor(pl.LightningModule):
         '''
         Generate predictions from the model using DataFrames. In general it is recommended to use `predict_ts()` which is a more flexible wrapper of this method.
         
-        :param [pd.DataFrame] timeseries: Input data from L1 monitor. Must contain the keys the model expects (check `model.in_norm.keys()`).
-        :param [pd.DataFrame] position: Position(s) of desired prediction. Must contain the keys the model expects (check `model.pos_norm.keys()`). 
-        :returns [pd.DataFrame] tar_scaled: Model output for the given timerange or input data. Includes means and standard deviations at each timestep.
+        :param [DataFrame] timeseries: Input data from L1 monitor. Must contain the keys the model expects (check `model.in_norm.keys()`).
+        :param [DataFrame] position: Position(s) of desired prediction. Must contain the keys the model expects (check `model.pos_norm.keys()`). 
+        :returns [DataFrame] tar_scaled: Model output for the given timerange or input data. Includes means and standard deviations at each timestep.
         '''
         in_scaled = timeseries.loc[:, self.in_norm.keys()].copy() # Get just the keys used for prediction
         for feature in self.in_norm.keys(): # Scale each input feature DOWN
@@ -406,7 +406,7 @@ class SWRegressor(pl.LightningModule):
         :param [float, array-like] sme: SuperMAG SME index (nT). Only used for plasmasheet model.
         :param [float, array-like] smr: SuperMAG SMR index (nT). Only used for plasmasheet model.
         :param [float, array-like] tilt: Earth dipole tilt angle (degrees). Only used for plasmasheet model.
-        :returns [pd.Dataframe] in_df: Input dataframe suitable to predict from with self.predict(). 
+        :returns [Dataframe] in_df: Input dataframe suitable to predict from with self.predict(). 
         '''
         in_df = pd.DataFrame(columns = self.in_norm.keys()) #Initialize single-point input dataframe
         # NOTE: The following is designed to only work with keys from the Wind key parameters datasets
@@ -447,7 +447,7 @@ class SWRegressor(pl.LightningModule):
 
         :param [str] start: The start date of the data to load ('YYYY-MM-DD')
         :param [str] stop: The end date of the data to load ('YYYY-MM-DD')
-        :returns [pd.DataFrame] in_df: Input dataframe suitable to predict from with self.predict(). 
+        :returns [DataFrame] in_df: Input dataframe suitable to predict from with self.predict(). 
         '''
         try:
             from cdasws import CdasWs
