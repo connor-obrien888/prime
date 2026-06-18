@@ -184,6 +184,9 @@ class SWRegressor(pl.LightningModule):
         self.example_input_array = (torch.rand(50, self.window, self.in_dim, device = self.device), torch.rand(50, self.pos_dim, device = self.device)) # (x, position)
     
     def forward(self, x, position):
+        '''
+        Model forward pass.
+        '''
         out, h = self.encoder.forward(x)
         y_hat = self.decoder.forward(out, position)
         return y_hat
@@ -569,6 +572,9 @@ class SWRegressor(pl.LightningModule):
     ###################################################################
     
     def predict_step(self, batch, batch_idx):
+        '''
+        One prediction step (no gradient updates).
+        '''
         timeseries, position, target, times = batch
         with torch.no_grad():
             y_hat = self(timeseries, position)
@@ -583,6 +589,9 @@ class SWRegressor(pl.LightningModule):
         }
 
     def training_step(self, batch, batch_idx):
+        '''
+        One training step. Updates train-side metrics.
+        '''
         timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
         # Calculate loss
@@ -607,6 +616,9 @@ class SWRegressor(pl.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
+        '''
+        One validation step. Updates validation-side metrics.
+        '''
         timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
         # Calculate loss
@@ -625,6 +637,9 @@ class SWRegressor(pl.LightningModule):
         return val_loss
 
     def test_step(self, batch, batch_idx):
+        '''
+        One test step. Updates test-side metrics.
+        '''
         timeseries, position, target, times = batch
         y_hat = self(timeseries, position)
         # Calculate loss
@@ -747,8 +762,9 @@ class SWRegressor(pl.LightningModule):
             self.log('MAE/test', self.tst_mae.compute(), on_epoch=True, logger=True, sync_dist=True)
 
     def on_before_optimizer_step(self, optimizer):
-        # Compute the 2-norm for each layer
-        # If using mixed precision, the gradients are already unscaled here
+        '''
+        Computes the 2-norm for each layer. If using mixed precision, the gradients are already unscaled here.
+        '''
         norms = pl.utilities.grad_norm(self.encoder, norm_type=2)
         self.log_dict(norms)
 

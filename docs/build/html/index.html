@@ -1,21 +1,21 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Welcome to PRIME’s documentation! &mdash; primesw 0.4.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=4e78f113"></script>
-      <script src="_static/doctools.js?v=888ff710"></script>
-      <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="_static/documentation_options.js?v=6c02275b"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -71,9 +71,11 @@
            <div itemprop="articleBody">
              
   <section id="welcome-to-prime-s-documentation">
-<h1>Welcome to PRIME’s documentation!<a class="headerlink" href="#welcome-to-prime-s-documentation" title="Permalink to this heading"></a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">primesw</span></code> is an implementation of the Probabilistic Regressor for Input to the Magnetosphere Estimation (PRIME) L1-to-Earth solar wind propagation algorithm.
+<h1>Welcome to PRIME’s documentation!<a class="headerlink" href="#welcome-to-prime-s-documentation" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">primesw</span></code> is an implementation of the Probabilistic Regressor for Input to the Magnetosphere Estimation (PRIME) architecture.
+This package provides an API to access the L1-to-Earth solar wind propagation algorithm PRIME, the L1-to-magnetosheath propagation algorithm PRIME-SH, and the L1-to-plasmasheet propagation algorithm PRIME-PS.
 For details on the algorithm development, see the <a class="reference external" href="https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full">paper</a>.
+For details on the magnetosheath prediction algorithm PRIME-SH, see the <a class="reference external" href="https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2024JH000235">other paper</a>.
 Install using pip:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">pip install primesw</span>
 </pre></div>
@@ -81,34 +83,40 @@ Install using pip:</p>
 <p>You can also find the latest version on <a class="reference external" href="https://github.com/connor-obrien888/prime">GitHub</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>This project is still under active development. This note was last updated on April 29, 2025.</p>
+<p>This project is still under active development. This note was last updated on June 17, 2026.</p>
 </div>
 <section id="why-use-prime">
-<h2>Why Use PRIME?<a class="headerlink" href="#why-use-prime" title="Permalink to this heading"></a></h2>
-<p>PRIME is a probabilistic recurrent neural network trained to predict the solar wind conditions just upstream of Earth’s bow shock using measurements of the solar wind at the first Earth-Sun Lagrange point (L1). PRIME is capable of predicting:
-- Solar wind flow velocity vector (km/s) in GSE coordinates
-- Interplanetary magnetic field vector (nT) in GSM coordinates
-- Solar wind plasma number density (cm^-3)</p>
+<h2>Why Use PRIME?<a class="headerlink" href="#why-use-prime" title="Link to this heading"></a></h2>
+<p>The solar wind propagation algorithm PRIME is a probabilistic recurrent neural network trained to predict the solar wind conditions just upstream of Earth’s bow shock using measurements of the solar wind at the first Earth-Sun Lagrange point (L1). PRIME is capable of predicting:</p>
+<ul class="simple">
+<li><p>Solar wind flow velocity vector (km/s) in GSE coordinates</p></li>
+<li><p>Interplanetary magnetic field vector (nT) in GSM coordinates</p></li>
+<li><p>Solar wind plasma number density (cm^-3)</p></li>
+</ul>
 <p>PRIME’s predictions consist of a mean and a variance defining a Gaussian probability distribution for each parameter.
 Users can use these distributions to define confidence intervals, error bars, or another measure of uncertainty suited for the user’s task.
 PRIME’s probability distributions are reliable to within 3.5% on average, and the means of the distribution are shown to be more accurate predictors of the solar wind than the outputs of other common solar wind propagation algorithms (see the <a class="reference external" href="https://www.frontiersin.org/articles/10.3389/fspas.2023.1250779/full">paper</a> for more details).</p>
+<p>This package also includes the magnetosheath and plasmasheet preidction algorithms PRIME-SH and PRIME-PS.
+These algorithms also predict a mean and a variance defining a Gaussian probability distribution for each parameter in the regions they predict.
+Since they were trained on different MMS data, they are capable of predicting the perp-to-B and parallel-to-B temperature in the magnetosheath (PRIME-SH), and the electron and ion temperatures in the plasmasheet (PRIME-PS).</p>
 </section>
 <section id="predicting-with-prime">
-<h2>Predicting with PRIME<a class="headerlink" href="#predicting-with-prime" title="Permalink to this heading"></a></h2>
-<p>Making predictions with PRIME using the <code class="docutils literal notranslate"><span class="pre">primesw</span></code> package is done using the <code class="docutils literal notranslate"><span class="pre">primesw.prime</span></code> class. <code class="docutils literal notranslate"><span class="pre">primesw.prime</span></code> objects wrap an instance of PRIME that can be used to predict the solar wind conditions at Earth’s bow shock nose given a time range:</p>
+<h2>Predicting with PRIME<a class="headerlink" href="#predicting-with-prime" title="Link to this heading"></a></h2>
+<p>Making predictions with PRIME using the <code class="docutils literal notranslate"><span class="pre">primesw</span></code> package is done using the <code class="docutils literal notranslate"><span class="pre">primesw.SWRegressor</span></code> class. Use the <code class="docutils literal notranslate"><span class="pre">primesw.load()</span></code> function to instantiate the model, being sure to specify which model you desire:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">primesw</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psw</span>
-<span class="n">propagator</span> <span class="o">=</span> <span class="n">psw</span><span class="o">.</span><span class="n">prime</span><span class="p">()</span>
-<span class="n">propagator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="s1">&#39;2020-01-01 00:00:00&#39;</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="s1">&#39;2020-01-02 00:00:00&#39;</span><span class="p">)</span>
+<span class="n">propagator</span> <span class="o">=</span> <span class="n">psw</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;PRIME&#39;</span><span class="p">)</span>
+<span class="n">propagator</span><span class="o">.</span><span class="n">predict_ts</span><span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="s1">&#39;2020-01-01 00:00:00&#39;</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="s1">&#39;2020-01-02 00:00:00&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">primesw.prime</span></code> objects can also make predictions at locations other than Earth’s bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">propagator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="s1">&#39;2020-01-01 00:00:00&#39;</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="s1">&#39;2020-01-02 00:00:00&#39;</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<p><code class="docutils literal notranslate"><span class="pre">primesw.SWRegressor</span></code> objects can also make predictions at locations other than Earth’s bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">propagator</span><span class="o">.</span><span class="n">predict_ts</span><span class="p">(</span><span class="n">start</span> <span class="o">=</span> <span class="s1">&#39;2020-01-01 00:00:00&#39;</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="s1">&#39;2020-01-02 00:00:00&#39;</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
-<p>Users can also generate synthetic L1 solar wind data using the <code class="docutils literal notranslate"><span class="pre">primesw.prime.build_synth_input</span></code> method in order to use PRIME to study solar wind propagtion in a theoretical sense. It is not recommended to use PRIME to predict the solar wind in areas it was not trained on, or using inputs outside the range of solar wind conditions it was trained on.</p>
+<p>Users can also generate synthetic L1 solar wind data using the <code class="docutils literal notranslate"><span class="pre">primesw.SWRegressor.build_synth_input()</span></code> method in order to use PRIME to study solar wind propagtion in a theoretical sense.
+It is not recommended to use PRIME to predict the solar wind in areas it was not trained on, or using inputs outside the range of solar wind conditions it was trained on.</p>
 </section>
 <section id="citation">
-<h2>Citation<a class="headerlink" href="#citation" title="Permalink to this heading"></a></h2>
+<h2>Citation<a class="headerlink" href="#citation" title="Link to this heading"></a></h2>
 <p>If you make use of PRIME, please cite it:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">@article{obrien_prime_2023,</span>
 <span class="go">        title = {{PRIME}: a probabilistic neural network approach to solar wind propagation from {L1}},</span>
@@ -125,37 +133,58 @@ PRIME’s probability distributions are reliable to within 3.5% on average, and 
 <span class="go">        }</span>
 </pre></div>
 </div>
+<p>If you make use of PRIME-SH, please cite it:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">@article{obrien_primesh_2024,</span>
+<span class="go">        title = {{PRIME}‐{SH}: {A} {Data}‐{Driven} {Probabilistic} {Model} of {Earth}&#39;s {Magnetosheath}},</span>
+<span class="go">        volume = {1},</span>
+<span class="go">        issn = {2993-5210, 2993-5210},</span>
+<span class="go">        shorttitle = {{PRIME}‐{SH}},</span>
+<span class="go">        url = {https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2024JH000235},</span>
+<span class="go">        doi = {10.1029/2024JH000235},</span>
+<span class="go">        language = {en},</span>
+<span class="go">        number = {3},</span>
+<span class="go">        urldate = {2024-07-30},</span>
+<span class="go">        journal = {Journal of Geophysical Research: Machine Learning and Computation},</span>
+<span class="go">        author = {O’Brien, C. and Walsh, B. M. and Zou, Y. and Qudsi, R. and Tasnim, S. and Zhang, H. and Sibeck, D. G.},</span>
+<span class="go">        month = sep,</span>
+<span class="go">        year = {2024},</span>
+<span class="go">        pages = {e2024JH000235},</span>
+<span class="go">        }</span>
+</pre></div>
+</div>
 </section>
 <section id="contents">
-<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this heading"></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">primesw</span></code> has two submodules, one for solar wind prediction (<code class="docutils literal notranslate"><span class="pre">prime</span></code>) and one for magnetosheath prediction (<code class="docutils literal notranslate"><span class="pre">primesh</span></code>).</p>
+<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">primesw</span></code> can load three different models by default by specifying keywords to <code class="docutils literal notranslate"><span class="pre">primesw.load()</span></code>.
+PRIME for solar wind prediction (<code class="docutils literal notranslate"><span class="pre">primesw.load('PRIME')</span></code>), PRIME-SH for magnetosheath prediction (<code class="docutils literal notranslate"><span class="pre">primesw.load('PRIME-SH')</span></code>), and PRIME-PS for plasmasheet prediction (<code class="docutils literal notranslate"><span class="pre">primesw.load('PRIME-PS')</span></code>).
+Their usage is slightly different, please check each section for caveats.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="sw.html">Solar Wind Prediction</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="sw.html#primesw.prime"><code class="docutils literal notranslate"><span class="pre">prime</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.build_model"><code class="docutils literal notranslate"><span class="pre">prime.build_model()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.build_real_input"><code class="docutils literal notranslate"><span class="pre">prime.build_real_input()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.build_synth_input"><code class="docutils literal notranslate"><span class="pre">prime.build_synth_input()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.fraction"><code class="docutils literal notranslate"><span class="pre">prime.fraction</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.predict"><code class="docutils literal notranslate"><span class="pre">prime.predict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.predict_grid"><code class="docutils literal notranslate"><span class="pre">prime.predict_grid()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.predict_raw"><code class="docutils literal notranslate"><span class="pre">prime.predict_raw()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.stride"><code class="docutils literal notranslate"><span class="pre">prime.stride</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sw.html#primesw.prime.window"><code class="docutils literal notranslate"><span class="pre">prime.window</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="swregressor.html">The <cite>SWRegressor</cite> Class</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor"><code class="docutils literal notranslate"><span class="pre">SWRegressor</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.build_real_input"><code class="docutils literal notranslate"><span class="pre">SWRegressor.build_real_input()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.build_synth_input"><code class="docutils literal notranslate"><span class="pre">SWRegressor.build_synth_input()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.configure_optimizers"><code class="docutils literal notranslate"><span class="pre">SWRegressor.configure_optimizers()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.forward"><code class="docutils literal notranslate"><span class="pre">SWRegressor.forward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.on_before_optimizer_step"><code class="docutils literal notranslate"><span class="pre">SWRegressor.on_before_optimizer_step()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.on_test_epoch_end"><code class="docutils literal notranslate"><span class="pre">SWRegressor.on_test_epoch_end()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.on_train_epoch_end"><code class="docutils literal notranslate"><span class="pre">SWRegressor.on_train_epoch_end()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.on_validation_epoch_end"><code class="docutils literal notranslate"><span class="pre">SWRegressor.on_validation_epoch_end()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.predict_df"><code class="docutils literal notranslate"><span class="pre">SWRegressor.predict_df()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.predict_grid"><code class="docutils literal notranslate"><span class="pre">SWRegressor.predict_grid()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.predict_step"><code class="docutils literal notranslate"><span class="pre">SWRegressor.predict_step()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.predict_ts"><code class="docutils literal notranslate"><span class="pre">SWRegressor.predict_ts()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.test_step"><code class="docutils literal notranslate"><span class="pre">SWRegressor.test_step()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.training_step"><code class="docutils literal notranslate"><span class="pre">SWRegressor.training_step()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="swregressor.html#primesw.prime_torch.SWRegressor.validation_step"><code class="docutils literal notranslate"><span class="pre">SWRegressor.validation_step()</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="sh.html">Magnetosheath Prediction</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="sh.html#primesw.primesh"><code class="docutils literal notranslate"><span class="pre">primesh</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="sh.html#primesw.primesh.predict_grid"><code class="docutils literal notranslate"><span class="pre">primesh.predict_grid()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="sh.html#primesw.primesh.predict_raw"><code class="docutils literal notranslate"><span class="pre">primesh.predict_raw()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="sh.html">Magnetosheath Prediction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ps.html">Plasmasheet Prediction</a></li>
 </ul>
 </li>
 </ul>
