@@ -6,6 +6,7 @@
 import os
 import sys
 
+import primesw
 # from primesw import __version__
 # from primesw import DocstringInfo
 
@@ -17,8 +18,8 @@ sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'prime_lib')))
 # -- Project information
 
 project = 'primesw'
-release = '0.4.0' #__version__
-version = '0.4.0' #__version__
+release = primesw.__version__
+version = primesw.__version__
 copyright = '2025, primesw Developers'
 
 

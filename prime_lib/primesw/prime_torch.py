@@ -186,7 +186,7 @@ class SWRegressor(pl.LightningModule):
     def forward(self, x, position):
         '''
         Model forward pass.
-        
+
         :meta private:
         '''
         out, h = self.encoder.forward(x)
@@ -239,9 +239,9 @@ class SWRegressor(pl.LightningModule):
         '''
         Generate predictions from the model using DataFrames. In general it is recommended to use `predict_ts()` which is a more flexible wrapper of this method.
         
-        :param [DataFrame] timeseries: Input data from L1 monitor. Must contain the keys the model expects (check `model.in_norm.keys()`).
-        :param [DataFrame] position: Position(s) of desired prediction. Must contain the keys the model expects (check `model.pos_norm.keys()`). 
-        :returns: [DataFrame] tar_scaled: Model output for the given timerange or input data. Includes means and standard deviations at each timestep.
+        :param [pd.DataFrame] timeseries: Input data from L1 monitor. Must contain the keys the model expects (check `model.in_norm.keys()`).
+        :param [pd.DataFrame] position: Position(s) of desired prediction. Must contain the keys the model expects (check `model.pos_norm.keys()`). 
+        :returns [pd.DataFrame] tar_scaled: Model output for the given timerange or input data. Includes means and standard deviations at each timestep.
         '''
         in_scaled = timeseries.loc[:, self.in_norm.keys()].copy() # Get just the keys used for prediction
         for feature in self.in_norm.keys(): # Scale each input feature DOWN
@@ -406,7 +406,7 @@ class SWRegressor(pl.LightningModule):
         :param [float, array-like] sme: SuperMAG SME index (nT). Only used for plasmasheet model.
         :param [float, array-like] smr: SuperMAG SMR index (nT). Only used for plasmasheet model.
         :param [float, array-like] tilt: Earth dipole tilt angle (degrees). Only used for plasmasheet model.
-        :returns [Dataframe] in_df: Input dataframe suitable to predict from with self.predict(). 
+        :returns [pd.Dataframe] in_df: Input dataframe suitable to predict from with self.predict(). 
         '''
         in_df = pd.DataFrame(columns = self.in_norm.keys()) #Initialize single-point input dataframe
         # NOTE: The following is designed to only work with keys from the Wind key parameters datasets
@@ -445,9 +445,9 @@ class SWRegressor(pl.LightningModule):
         '''
         Load Wind spacecraft input data in between specified date strings.
 
-        :param [string] start: The start date of the data to load ('YYYY-MM-DD')
-        :param [string] stop: The end date of the data to load ('YYYY-MM-DD')
-        :returns [DataFrame] in_df: Input dataframe suitable to predict from with self.predict(). 
+        :param [str] start: The start date of the data to load ('YYYY-MM-DD')
+        :param [str] stop: The end date of the data to load ('YYYY-MM-DD')
+        :returns [pd.DataFrame] in_df: Input dataframe suitable to predict from with self.predict(). 
         '''
         try:
             from cdasws import CdasWs
@@ -934,7 +934,6 @@ def load(modelname = None, checkpoint = None):
         Loads a pretrained PRIME model, either one of the included models (PRIME, PRIME-SH, PRIME-PS) or a user supplied model checkpoint.
         
         :param [str] modelname: Name of included pretrained model to load. Options include 'PRIME' (solar wind model), 'PRIME-SH' (magnetosheath model), or 'PRIME-PS' (plasmasheet model).
-        :param [str or Path] config: Path to user-supplied configuration .yaml file. If specified, must also specify checkpoint path. Overrides supplied modelname.
         :param [str or Path] checkpoint: Path to user-supplied torch checkpoint .ckpt file. If specified, must also specify configuration path. Overrides supplied modelname.
         :returns [SWRegressor] model: Pretrained PRIME-like model.
     '''

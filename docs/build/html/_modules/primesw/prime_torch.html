@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>primesw.prime_torch &mdash; primesw 0.4.0 documentation</title>
+  <title>primesw.prime_torch &mdash; primesw 1.0.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=6c02275b"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -87,7 +87,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinearDecoder</span><span class="p">,</span> <span class="n">RecurrentEncoder</span><span class="p">,</span> <span class="n">TSPassthroughEncoder</span>
     
 <div class="viewcode-block" id="SWRegressor">
-<a class="viewcode-back" href="../../swregressor.html#primesw.prime_torch.SWRegressor">[docs]</a>
+<a class="viewcode-back" href="../../swregressor.html#primesw.SWRegressor">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SWRegressor</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LightningModule</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        This class wraps instances of the PRIME architecutre trained on different plasma regions throughout perigeospace.</span>
@@ -259,7 +259,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Model forward pass.</span>
-<span class="sd">        </span>
+
 <span class="sd">        :meta private:</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">out</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
@@ -271,7 +271,7 @@
     <span class="c1">#########################</span>
 
 <div class="viewcode-block" id="SWRegressor.predict_ts">
-<a class="viewcode-back" href="../../swregressor.html#primesw.prime_torch.SWRegressor.predict_ts">[docs]</a>
+<a class="viewcode-back" href="../../swregressor.html#primesw.SWRegressor.predict_ts">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">predict_ts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">in_data</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">13.25</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Generate predictions from the model. Specify either a `start` and `stop` time or supply input data (`in_data`) from an L1 monitor.</span>
@@ -312,14 +312,14 @@
 
 
 <div class="viewcode-block" id="SWRegressor.predict_df">
-<a class="viewcode-back" href="../../swregressor.html#primesw.prime_torch.SWRegressor.predict_df">[docs]</a>
+<a class="viewcode-back" href="../../swregressor.html#primesw.SWRegressor.predict_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">predict_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeseries</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Generate predictions from the model using DataFrames. In general it is recommended to use `predict_ts()` which is a more flexible wrapper of this method.</span>
 <span class="sd">        </span>
-<span class="sd">        :param [DataFrame] timeseries: Input data from L1 monitor. Must contain the keys the model expects (check `model.in_norm.keys()`).</span>
-<span class="sd">        :param [DataFrame] position: Position(s) of desired prediction. Must contain the keys the model expects (check `model.pos_norm.keys()`). </span>
-<span class="sd">        :returns: [DataFrame] tar_scaled: Model output for the given timerange or input data. Includes means and standard deviations at each timestep.</span>
+<span class="sd">        :param [pd.DataFrame] timeseries: Input data from L1 monitor. Must contain the keys the model expects (check `model.in_norm.keys()`).</span>
+<span class="sd">        :param [pd.DataFrame] position: Position(s) of desired prediction. Must contain the keys the model expects (check `model.pos_norm.keys()`). </span>
+<span class="sd">        :returns [pd.DataFrame] tar_scaled: Model output for the given timerange or input data. Includes means and standard deviations at each timestep.</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">in_scaled</span> <span class="o">=</span> <span class="n">timeseries</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c1"># Get just the keys used for prediction</span>
         <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="c1"># Scale each input feature DOWN</span>
@@ -362,7 +362,7 @@
 
     
 <div class="viewcode-block" id="SWRegressor.predict_grid">
-<a class="viewcode-back" href="../../swregressor.html#primesw.prime_torch.SWRegressor.predict_grid">[docs]</a>
+<a class="viewcode-back" href="../../swregressor.html#primesw.SWRegressor.predict_grid">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">predict_grid</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">ts</span><span class="p">,</span>
@@ -454,7 +454,7 @@
 
 
 <div class="viewcode-block" id="SWRegressor.build_synth_input">
-<a class="viewcode-back" href="../../swregressor.html#primesw.prime_torch.SWRegressor.build_synth_input">[docs]</a>
+<a class="viewcode-back" href="../../swregressor.html#primesw.SWRegressor.build_synth_input">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">build_synth_input</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">bx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> 
@@ -490,7 +490,7 @@
 <span class="sd">        :param [float, array-like] sme: SuperMAG SME index (nT). Only used for plasmasheet model.</span>
 <span class="sd">        :param [float, array-like] smr: SuperMAG SMR index (nT). Only used for plasmasheet model.</span>
 <span class="sd">        :param [float, array-like] tilt: Earth dipole tilt angle (degrees). Only used for plasmasheet model.</span>
-<span class="sd">        :returns [Dataframe] in_df: Input dataframe suitable to predict from with self.predict(). </span>
+<span class="sd">        :returns [pd.Dataframe] in_df: Input dataframe suitable to predict from with self.predict(). </span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="n">in_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="c1">#Initialize single-point input dataframe</span>
         <span class="c1"># NOTE: The following is designed to only work with keys from the Wind key parameters datasets</span>
@@ -527,14 +527,14 @@
 
     
 <div class="viewcode-block" id="SWRegressor.build_real_input">
-<a class="viewcode-back" href="../../swregressor.html#primesw.prime_torch.SWRegressor.build_real_input">[docs]</a>
+<a class="viewcode-back" href="../../swregressor.html#primesw.SWRegressor.build_real_input">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">build_real_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Load Wind spacecraft input data in between specified date strings.</span>
 
-<span class="sd">        :param [string] start: The start date of the data to load (&#39;YYYY-MM-DD&#39;)</span>
-<span class="sd">        :param [string] stop: The end date of the data to load (&#39;YYYY-MM-DD&#39;)</span>
-<span class="sd">        :returns [DataFrame] in_df: Input dataframe suitable to predict from with self.predict(). </span>
+<span class="sd">        :param [str] start: The start date of the data to load (&#39;YYYY-MM-DD&#39;)</span>
+<span class="sd">        :param [str] stop: The end date of the data to load (&#39;YYYY-MM-DD&#39;)</span>
+<span class="sd">        :returns [pd.DataFrame] in_df: Input dataframe suitable to predict from with self.predict(). </span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="kn">from</span><span class="w"> </span><span class="nn">cdasws</span><span class="w"> </span><span class="kn">import</span> <span class="n">CdasWs</span>
@@ -1018,12 +1018,13 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">score</span>
 
+<div class="viewcode-block" id="load">
+<a class="viewcode-back" href="../../swregressor.html#primesw.load">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">modelname</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">checkpoint</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Loads a pretrained PRIME model, either one of the included models (PRIME, PRIME-SH, PRIME-PS) or a user supplied model checkpoint.</span>
 <span class="sd">        </span>
 <span class="sd">        :param [str] modelname: Name of included pretrained model to load. Options include &#39;PRIME&#39; (solar wind model), &#39;PRIME-SH&#39; (magnetosheath model), or &#39;PRIME-PS&#39; (plasmasheet model).</span>
-<span class="sd">        :param [str or Path] config: Path to user-supplied configuration .yaml file. If specified, must also specify checkpoint path. Overrides supplied modelname.</span>
 <span class="sd">        :param [str or Path] checkpoint: Path to user-supplied torch checkpoint .ckpt file. If specified, must also specify configuration path. Overrides supplied modelname.</span>
 <span class="sd">        :returns [SWRegressor] model: Pretrained PRIME-like model.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
@@ -1038,7 +1039,8 @@
         <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span> <span class="c1"># Freeze the dropout and weights</span>
         <span class="k">return</span> <span class="n">model</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must specify either modelname or checkpoint&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must specify either modelname or checkpoint&quot;</span><span class="p">)</span></div>
+
 </pre></div>
 
            </div>
