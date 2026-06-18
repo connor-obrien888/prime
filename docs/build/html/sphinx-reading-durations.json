@@ -1,8 +1,8 @@
 {
-    "index": 0.018,
-    "install": 0.001,
-    "ps": 0.003,
+    "index": 0.02,
+    "install": 0.002,
+    "ps": 0.004,
     "sh": 0.003,
-    "swregressor": 3.097,
+    "swregressor": 39.102,
     "usage": 0.002
 }
