@@ -10,7 +10,7 @@ For instance, you can load a ``SWRegressor`` wrapping the solar wind prediction 
     import primesw as psw
     prime = psw.load('PRIME')
 
-.. autofunction:: primesw.load
+.. autofunction:: primesw.prime_torch.load
 
 The class method ``SWRegressor.predict_ts()`` is the way that most users will interface with the model.
 To generate predictions from Wind spacecraft data, specify ``start`` and ``stop`` times for the desired prediction.
