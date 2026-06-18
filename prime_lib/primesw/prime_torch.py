@@ -689,15 +689,14 @@ class SWRegressor(pl.LightningModule):
         self.logger.experiment.add_figure(f"JD/val_epoch{self.current_epoch}", fig)
         fig.clear()
 
-        if self.loss == 'crps':
-            fig, ax = plt.subplots(nrows = 1, ncols = 2, sharex = True, figsize = (7, 9))
-            # CRPS implies we're training a probabilistic model, plot a reliability diagram
+        if self.loss == 'crps': # CRPS implies we're training a probabilistic model, plot a reliability diagram
+            fig, ax = plt.subplots(nrows = 2, ncols = 1, sharex = True, figsize = (7, 9))
             phi = np.linspace(0,1,1000) #Observed probabily axis
             cumulative_dist = np.zeros((len(phi), len(self.tar_norm.keys()))) #Cumulative distribution for each parameter
             for i, feature in enumerate(self.tar_norm.keys()):
                 standard_err = (
                     (((val_preds[:, i*2] * self.tar_norm[feature][1]) + self.tar_norm[feature][0]) - ((targets[:, i] * self.tar_norm[feature][1]) + self.tar_norm[feature][0])) /
-                    (np.sqrt(2) * val_preds[:, i*2+1])
+                    (np.sqrt(2) * ((val_preds[:, i*2] * self.tar_norm[feature][1]) + self.tar_norm[feature][0]))
                 )
                 for j in range(len(val_preds)):
                     cumulative_dist[:,i] += (1/len(standard_err)) * np.heaviside(phi - 0.5*(errorfunc(standard_err[j])+1) , 1) #Calculate the cumulative distribution for each parameter
@@ -712,12 +711,12 @@ class SWRegressor(pl.LightningModule):
             ax[0].set_xlim(0,1)
             ax[0].set_ylim(0,1)
             ax[1].plot(phi, np.zeros(len(phi)), linestyle = '--', color = 'k')
-            ax[1].set_ylim(-0.15,0.15)
+            # ax[1].set_ylim(-0.15,0.15)
             ax[1].set_xlabel('Predicted Frequency')
             ax[1].set_ylabel('Under/Over-\nEstimation')
             ax[1].set_aspect('equal')
-            plt.subplots_adjust(hspace = -0.20)
-            self.logger.experiment.add_figure(f"RD", fig) #TODO: test and see if this stacks the images
+            # plt.subplots_adjust(hspace = -0.20)
+            self.logger.experiment.add_figure(f"RD/val_epoch{self.current_epoch}", fig)
             fig.clear()
 
         if self.save_debug_ckpt:
