@@ -1,9 +1,9 @@
 The SWRegressor Class and Solar Wind Prediction
 ===============================================
 
-The `primesw` is based around the `SWRegressor` class.
-This class subclasses the Pytorch Lightning `LightningModule`, and is flexible enough to load different model configurations that were trained to predict different plasma environments.
-For instance, you can load a `SWRegressor` wrapping the solar wind prediction model `PRIME` by specifying the keyword `'PRIME'` to `primesw.load()`:
+The ``primesw`` package is based around the ``SWRegressor`` class.
+This class subclasses the Pytorch Lightning ``LightningModule``, and is flexible enough to load different model configurations that were trained to predict different plasma environments.
+For instance, you can load a ``SWRegressor`` wrapping the solar wind prediction model PRIME by specifying the keyword ``'PRIME'`` to ``primesw.load()``:
 
 .. code-block:: python
 

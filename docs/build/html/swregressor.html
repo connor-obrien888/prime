@@ -89,9 +89,9 @@
              
   <section id="the-swregressor-class-and-solar-wind-prediction">
 <h1>The SWRegressor Class and Solar Wind Prediction<a class="headerlink" href="#the-swregressor-class-and-solar-wind-prediction" title="Link to this heading"></a></h1>
-<p>The <cite>primesw</cite> is based around the <cite>SWRegressor</cite> class.
-This class subclasses the Pytorch Lightning <cite>LightningModule</cite>, and is flexible enough to load different model configurations that were trained to predict different plasma environments.
-For instance, you can load a <cite>SWRegressor</cite> wrapping the solar wind prediction model <cite>PRIME</cite> by specifying the keyword <cite>‘PRIME’</cite> to <cite>primesw.load()</cite>:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">primesw</span></code> package is based around the <code class="docutils literal notranslate"><span class="pre">SWRegressor</span></code> class.
+This class subclasses the Pytorch Lightning <code class="docutils literal notranslate"><span class="pre">LightningModule</span></code>, and is flexible enough to load different model configurations that were trained to predict different plasma environments.
+For instance, you can load a <code class="docutils literal notranslate"><span class="pre">SWRegressor</span></code> wrapping the solar wind prediction model PRIME by specifying the keyword <code class="docutils literal notranslate"><span class="pre">'PRIME'</span></code> to <code class="docutils literal notranslate"><span class="pre">primesw.load()</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">primesw</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psw</span>
 <span class="n">prime</span> <span class="o">=</span> <span class="n">psw</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;PRIME&#39;</span><span class="p">)</span>
 </pre></div>
