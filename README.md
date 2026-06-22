@@ -1,5 +1,5 @@
 # PRIME
-[![DOI](https://zenodo.org/badge/648224321.svg)](https://zenodo.org/badge/latestdoi/648224321)
+[![DOI](https://zenodo.org/badge/648224321.svg)](https://doi.org/10.5281/zenodo.8065780)
 
 PRIME (Probabilistic Regressor for Input to the Magnetosphere Estimation) is a probabilistic algorithm that uses solar wind time history from L1 monitors to generate predictions of near-Earth solar wind with uncertainties. Install the python implementation of PRIME with
 ```
