@@ -1,14 +1,14 @@
 log_level: DEBUG
 #Logs and experiments
 experiments:
-  checkpoint: "~/data/prime/checkpoints"
+  checkpoint: "/glade/u/home/cobrien/data/prime/checkpoints"
   trainer:
     accelerator: gpu # "cpu", "mps", "auto"
     devices: [0] # "auto", 1, [0, 2], etc
     strategy: auto # multi-gpu: ddp_find_unused_parameters_true, single-gpu: "auto"
     precision: 32 # "16-mixed", "32-true", "32-float", "16-mixed", etc
     profiler: simple # options are 'XLAProfiler' (TPU), 'PyTorchProfiler', warning: PyTorchProfiler only works on cpu/gpu according to docs
-    max_epochs: 1 # number of epochs to train for
+    max_epochs: 100 # number of epochs to train for
     log_every_n_steps: 10
     check_val_every_n_epoch: 1
     detect_anomaly: False
@@ -18,39 +18,47 @@ experiments:
     limit_predict_batches: 1
     gradient_clip_val: 10
     gradient_clip_algorithm: value
-    tensorboard_path: "~/data/prime/tensorboard_logs"
+    tensorboard_path: "/glade/u/home/cobrien/data/prime/tensorboard_logs"
   #TODO: add tensorboard configuration here
 #Dataset configuration
 data:
-  target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
+  # target_features: ['mms1_dis_bulkv_gse_fast_0', 'mms1_dis_bulkv_gse_fast_1', 'mms1_dis_bulkv_gse_fast_2', 'mms1_des_numberdensity_fast', 'mms1_fgm_b_gse_srvy_l2_0', 'mms1_fgm_b_gse_srvy_l2_1', 'mms1_fgm_b_gse_srvy_l2_2']
   input_features: ['Np', 'V_GSE_0', 'V_GSE_1', 'V_GSE_2', 'THERMAL_SPD', 'BGSE_0', 'BGSE_1', 'BGSE_2', 'PGSE_0', 'PGSE_1', 'PGSE_2']
-  position_features: ['mms1_mec_r_gse_0', 'mms1_mec_r_gse_1', 'mms1_mec_r_gse_2']
+  target_features: ['mms1_dis_bulkv_gse_fast_0','mms1_fgm_b_gse_srvy_l2_2']
+  # input_features: ['mms1_dis_bulkv_gse_fast_0',]
+  position_features: ['r_gse_x', 'r_gse_y', 'r_gse_z']
+  interp_flags: ['interped_mfi', 'interped_swe']
   region: 'solar wind'
   cadence: '100s'
-  window: 100
-  stride: 0
-  interp_frac: 0.05
+  interpolate: True
+  window: 150
+  stride: 35
+  interp_frac: 0.10
   trn_bounds: ['20151007 12:08:00+0000', '20211217 04:33:00+0000'] # Bounds for SW data (PRE EXTENSION) resulting in 60/20/20 split
   val_bounds: ['20211217 04:34:00+0000', '20221206 11:21:00+0000']
   tst_bounds: ['20221206 11:22:00+0000', '20230601 14:21:00+0000']
-  datastore: "~/data/combined_data.h5"
-  key: "1min_mms_wind"
+  datastore: "/glade/u/home/cobrien/data/combined_data.h5"
+  in_key: "wind_1min_complete"
+  tar_key: "mms_1min_labeled_indexed"
 # Model configuration
-model:
-  decoder_type: 'linear'
+model: 
+  decoder_type: 'prob_linear'
   encoder_type: 'rnn'
-  decoder_hidden_layers: [128],
-  encoder_hidden_dim: 128,
-  encoder_num_layers: 1,
-  p_drop: 0.1,
-  pos_encoding_size: 8,
+  decoder_hidden_layers: [256, 512, 64, 128]
+  encoder_hidden_dim: 384
+  encoder_num_layers: 3
+  p_drop: 0.25
+  pos_encoding_size: 16
 
 # Optimization configuration
 opt:
-  loss: 'mae'
-  optimizer: 'adam'
-  lr: 1e-3
-  lr_scheduler: None
+  loss: 'crps'
+  optimizer: 'adam' 
+  lr: 1e-5
+  lr_scheduler: const
+  patience: 10
+  factor: 0.5
   weight_decay: 0
-  batch_size: 32
-  num_workers: 1
+  total_iters: 40 # Used for some LR schedulers (e.g. linear)
+  batch_size: 4096 # Optimal batch size for one Derecho GPU
+  num_workers: 127

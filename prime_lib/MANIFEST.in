@@ -1,2 +1,1 @@
-include primesw/*.keras
-include primesw/*.pkl
+include primesw/*.ckpt
