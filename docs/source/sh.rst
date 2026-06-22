@@ -27,7 +27,7 @@ For instance, one can predict what the solar wind at the magnetopause nose would
 
     import primesw as psw
     primesh = psw.load('PRIME-SH')
-    primesh.predict_ts(input = primesh.build_synth_input(n=20))
+    primesh.predict_ts(in_data = primesh.build_synth_input(ni=20))
 
 By default for PRIME-SH, predictions are made at the average middle of Earth's magnetosheath 12.25 Earth Radii upstream on the Geocentric Solar Ecliptic (GSE) x-axis.
 One can also specify a position to propagate to besides the default by specifying ``pos``:

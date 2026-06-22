@@ -1,6 +1,6 @@
 [project]
 name = "primesw"
-version = "1.0.0"
+version = "2.0.0"
 description = "Probabilistic Regressor for Input to the Magnetosphere Estimation (Solar Wind)"
 authors = [{name = "Connor OBrien", email = "obrienco@bu.edu"}]
 license = {text = "GPL-3.0"}
@@ -33,7 +33,7 @@ dependencies = [
 include = ["primesw"]
 
 [project.urls]
-Homepage = "https://github.com/connor-obrien888/prime"
+Homepage = "https://primesw.readthedocs.io/en/latest/"
 
 [build-system]
 requires = ["poetry-core"]

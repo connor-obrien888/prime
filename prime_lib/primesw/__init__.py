@@ -2,6 +2,6 @@
 Test string in __init__
 '''
 
-from .prime_torch import load
+from .prime import load
 
-__version__ = '1.0.0'
+__version__ = '2.0.0'

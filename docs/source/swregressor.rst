@@ -10,7 +10,7 @@ For instance, you can load a ``SWRegressor`` wrapping the solar wind prediction 
     import primesw as psw
     prime = psw.load('PRIME')
 
-.. autofunction:: primesw.prime_torch.load
+.. autofunction:: primesw.prime.load
 
 The class method ``SWRegressor.predict_ts()`` is the way that most users will interface with the model.
 To generate predictions from Wind spacecraft data, specify ``start`` and ``stop`` times for the desired prediction.
@@ -46,5 +46,5 @@ All positions are in GSE coordinates with units of Earth Radii.
 It is not recommended to make predictions outside of the region any given model was trained on.
 For PRIME, that's within 30 Earth radii of the Earth on the dayside.
 
-.. autoclass:: primesw.prime_torch.SWRegressor
+.. autoclass:: primesw.prime.SWRegressor
     :members:

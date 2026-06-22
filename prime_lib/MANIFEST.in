@@ -1,2 +1,1 @@
 include primesw/*.ckpt
-include primesw/*.yaml
