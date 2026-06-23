@@ -211,7 +211,9 @@ class SWRegressor(pl.LightningModule):
         pos_keys = list(self.pos_norm.keys())
         if in_data is None:
             if (start is not None)&(stop is not None):
-                timeseries = self.build_real_input(start = start, stop = stop)
+                new_start = (pd.to_datetime(start, utc = True) - pd.Timedelta(seconds = int(100 * (self.window + self.stride + 1)))).strftime('%Y-%m-%d %H:%M:%S')
+                new_stop = (pd.to_datetime(stop, utc = True) - pd.Timedelta(seconds = int(100 * (self.stride)))).strftime('%Y-%m-%d %H:%M:%S')
+                timeseries = self.build_real_input(start = new_start, stop = new_stop)
             else:
                 raise RuntimeWarning('Must specify either input or (start and stop).')
                 return None
