@@ -22,6 +22,10 @@ To generate predictions from Wind spacecraft data, specify ``start`` and ``stop`
     prime = psw.load('PRIME')
     prime.predict_ts(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
 
+.. note::
+
+   This function downloads data from CDAWeb, which occasionally rate-limits downloads. When a ConnectionError is received, try making the request again.
+
 If using data from an L1 monitor to make predictions, pass the input data using the ``in_data`` argument.
 If ``in_data`` is specified, ``start`` and ``stop`` should not be (and vice versa).
 ``in_data`` is also useful for making predicitons from synthetic solar wind data (see ``SWRegressor.build_synth_input()``).

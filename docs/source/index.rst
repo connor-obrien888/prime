@@ -44,15 +44,15 @@ Use the ``primesw.load()`` function to instantiate the model, being sure to spec
 .. code-block:: python
 
    import primesw as psw
-   propagator = psw.load('PRIME')
-   propagator.predict_ts(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
+   prime = psw.load('PRIME')
+   prime.predict_ts(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00')
 
 
 ``SWRegressor`` objects can also make predictions at locations other than Earth's bow shock nose by passing a location given in Geocentric Solar Ecliptic coordinates:
 
 .. code-block:: python
 
-   propagator.predict_ts(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00', pos = [13, 5, 0])
+   prime.predict_ts(start = '2020-01-01 00:00:00', stop = '2020-01-02 00:00:00', pos = [13, 5, 0])
 
 
 Users can also generate synthetic L1 solar wind data using the ``SWRegressor.build_synth_input()`` method in order to use PRIME to study solar wind propagtion in a theoretical sense.
