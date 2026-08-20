@@ -1,6 +1,6 @@
 [project]
 name = "primesw"
-version = "2.0.2"
+version = "2.0.3"
 description = "Probabilistic Regressor for Input to the Magnetosphere Estimation (Solar Wind)"
 authors = [{name = "Connor OBrien", email = "obrienco@bu.edu"}]
 license = {text = "GPL-3.0"}
