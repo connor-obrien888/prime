@@ -471,7 +471,17 @@ class SWRegressor(pl.LightningModule):
             mfi_df['B_ygsm'] = data[1]['BGSMc'][:, 1]
             mfi_df['B_zgsm'] = data[1]['BGSMc'][:, 2]
         except TypeError: #Throws when date range is empty OR too big
-            raise RuntimeError('CDASWS failed to load MFI data. Date range ('+start+' to '+stop+') may be too large or data may be missing.')
+            try: # Try loading the other MFI dataset
+                data = cdas.get_data('WI_H0_MFI', ['BGSM', 'PGSE'], start, stop) #Load GSM B field and GSE SC position
+                mfi_df['Epoch'] = data[1]['Epoch'] #MFI timestamps
+                mfi_df['R_xgse'] = data[1]['PGSE'][:, 0] #Wind SC position
+                mfi_df['R_ygse'] = data[1]['PGSE'][:, 1]
+                mfi_df['R_zgse'] = data[1]['PGSE'][:, 2]
+                mfi_df['B_xgsm'] = data[1]['BGSM'][:, 0] #GSM B field
+                mfi_df['B_ygsm'] = data[1]['BGSM'][:, 1]
+                mfi_df['B_zgsm'] = data[1]['BGSM'][:, 2]
+            except TypeError:
+                raise RuntimeError('CDASWS failed to load MFI data. Date range ('+start+' to '+stop+') may be too large or data may be missing.')
         mfi_df['Epoch'] = pd.to_datetime(mfi_df['Epoch'], utc=True) #Convert to UTC aware datetime
         #Set B values to nan if they are equal to the fill value of -1e31
         mfi_df['B_xgsm'] = mfi_df['B_xgsm'].where(mfi_df['B_xgsm'] > -1e30, np.nan)
